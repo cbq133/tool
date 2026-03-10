@@ -1,0 +1,3716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汽车电子零部件测试与寿命评估集成工具</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --secondary-color: #17a2b8;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --mandatory-color: #d9534f;
+            --optional-color: #f0ad4e;
+            --tbd-color: #5bc0de;
+            --text-color: #333;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --electrical-color: #6f42c1;
+            --emc-color: #fd7e14;
+            --environment-color: #20c997;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffffff;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 15px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .navbar-brand {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .nav-link {
+            color: white !important;
+            margin: 0 15px;
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            color: #e3f2fd !important;
+            transform: translateY(-2px);
+        }
+
+        .tool-container {
+            display: none;
+            padding: 20px;
+            min-height: calc(100vh - 80px);
+        }
+
+        .tool-container.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .container-fluid {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        /* 测试序列生成器样式 */
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        .header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+        }
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .panel-title {
+            font-size: 1.3em;
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-group {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .section-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 10px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background: white;
+            border: 1px solid #e1e5eb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .checkbox-item:hover {
+            background: #e3f2fd;
+            border-color: #3498db;
+        }
+        .checkbox-item input {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+        }
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 0.95em;
+            flex: 1;
+        }
+        .test-code {
+            background: #e8f4fd;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            color: #2980b9;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+        .test-cost {
+            background: #fff3e0;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            color: #f57c00;
+            margin-left: 5px;
+        }
+        .test-duration {
+            background: #e8f5e9;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            color: #388e3c;
+            margin-left: 5px;
+        }
+        .btn-generate {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        }
+        .btn-generate:hover {
+            background: linear-gradient(135deg, #219653, #27ae60);
+            transform: translateY(-2px);
+        }
+        .btn-reset {
+            background: #95a5a6;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-primary-custom {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        .btn-primary-custom:hover {
+            background: #2980b9;
+        }
+        .btn-danger-custom {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .btn-edit-custom {
+            background: #f39c12;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+        .btn-save-custom {
+            background: #9b59b6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+        .btn-save-custom:hover {
+            background: #8e44ad;
+        }
+        .test-sequence-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .test-sequence-table th {
+            background: #3498db;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        .test-sequence-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e1e5eb;
+        }
+        .test-sequence-table tr:hover {
+            background: #f8f9fa;
+        }
+        .test-sequence-table input[type="number"] {
+            width: 70px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .phase-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .phase-1 { background: #e3f2fd; color: #1976d2; }
+        .phase-2 { background: #fff3e0; color: #f57c00; }
+        .phase-3 { background: #e8f5e9; color: #388e3c; }
+        .phase-4 { background: #fce4ec; color: #c2185b; }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-card.green { background: linear-gradient(135deg, #11998e, #38ef7d); }
+        .stat-card.orange { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .stat-card.blue { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .stat-card.red { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .export-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            margin-right: 10px;
+        }
+        .export-btn:hover {
+            background: #2980b9;
+        }
+        .modal-header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+        }
+        .modal-body .form-group {
+            margin-bottom: 15px;
+        }
+        .modal-body label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .custom-test-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e1e5eb;
+            border-radius: 6px;
+            padding: 10px;
+            background: #fafafa;
+        }
+        .custom-test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border: 1px solid #e1e5eb;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .custom-test-item:hover {
+            background: #e3f2fd;
+        }
+        .tab-nav {
+            display: flex;
+            border-bottom: 2px solid #e1e5eb;
+            margin-bottom: 20px;
+        }
+        .tab-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .tab-item.active {
+            border-bottom-color: #3498db;
+            color: #3498db;
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .config-file-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .config-file-status.success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+        }
+        .config-file-status.error {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        .config-file-status.info {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        .file-drop-area {
+            border: 3px dashed #3498db;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .file-drop-area:hover {
+            background: #e3f2fd;
+            border-color: #2980b9;
+        }
+        .file-drop-area.drag-over {
+            background: #e8f5e9;
+            border-color: #27ae60;
+        }
+        .config-file-info {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #ff9800;
+        }
+        .sequence-builder {
+            background: #fafafa;
+            border: 1px solid #e1e5eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .branch-container {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+        }
+        .branch-header {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .branch-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border: 1px solid #e1e5eb;
+            border-radius: 6px;
+            margin: 5px 0;
+            cursor: move;
+        }
+        .branch-item:hover {
+            background: #e3f2fd;
+            border-color: #3498db;
+        }
+        .branch-item.selected {
+            background: #e8f5e9;
+            border-color: #27ae60;
+        }
+        .sample-badge {
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        .cost-badge {
+            background: #f39c12;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+        .flow-diagram {
+            background: white;
+            border: 1px solid #e1e5eb;
+            border-radius: 8px;
+            padding: 30px;
+            overflow-x: auto;
+            margin: 20px 0;
+            min-height: 400px;
+        }
+        .flow-node {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border-radius: 6px;
+            margin: 10px;
+            text-align: center;
+            min-width: 120px;
+        }
+        .flow-branch {
+            display: inline-block;
+            vertical-align: top;
+            margin: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+        }
+        .flow-connection {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 1.5em;
+            margin: 5px 0;
+        }
+        .sample-reuse-info {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .test-cost-input {
+            width: 100px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: right;
+        }
+        .parallel-branch {
+            position: relative;
+            padding-left: 30px;
+            margin: 10px 0;
+        }
+        .parallel-branch::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #3498db;
+        }
+        .sequential-item {
+            position: relative;
+            padding-left: 30px;
+            margin: 5px 0;
+        }
+        .sequential-item::before {
+            content: '↓';
+            position: absolute;
+            left: 10px;
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        /* 变更评估样式 */
+        .standards-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 0.9em;
+        }
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            background: linear-gradient(to right, #f8f9fa, #e9ecef);
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 6px solid var(--primary-color);
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #444;
+            font-size: 0.95em;
+        }
+        select {
+            padding: 14px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+            background-color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 8px rgba(0,86,179,0.3);
+        }
+        select:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+        .section-title {
+            font-size: 1.35em;
+            color: var(--primary-color);
+            margin-top: 35px;
+            margin-bottom: 18px;
+            font-weight: 700;
+            border-left: 6px solid var(--primary-color);
+            padding-left: 15px;
+            background: linear-gradient(to right, #f8f9fa, transparent);
+            padding-top: 8px;
+            padding-bottom: 8px;
+        }
+        .test-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            font-size: 13px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .test-table th, .test-table td {
+            border: 1px solid #e0e0e0;
+            padding: 14px 12px;
+            text-align: left;
+        }
+        .test-table th {
+            background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+        .test-table tr:nth-child(even) {
+            background-color: #fafbfc;
+        }
+        .test-table tr:hover {
+            background-color: #f0f4ff;
+        }
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 11px;
+            min-width: 75px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .badge-mandatory { 
+            background: linear-gradient(135deg, #d9534f 0%, #c9302c 100%); 
+        }
+        .badge-optional { 
+            background: linear-gradient(135deg, #f0ad4e 0%, #ec971f 100%); 
+        }
+        .badge-tbd { 
+            background: linear-gradient(135deg, #5bc0de 0%, #31b0d5 100%); 
+        }
+        .sample-badge {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        .advice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .advice-card {
+            background: #fff;
+            border: 1px solid #e1e4e8;
+            border-radius: 10px;
+            padding: 22px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            border-top: 4px solid transparent;
+        }
+        .advice-card.principle { border-top-color: #28a745; }
+        .advice-card.aging { border-top-color: #fd7e14; }
+        .advice-card.profit { border-top-color: #6f42c1; }
+        .advice-card.quality { border-top-color: #17a2b8; }
+        .advice-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .advice-card h3 {
+            margin: 0 0 12px 0;
+            color: #333;
+            font-size: 1.15em;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .advice-content {
+            font-size: 13.5px;
+            color: #555;
+            line-height: 1.8;
+        }
+        .legend {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+            text-align: right;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .legend span { 
+            margin-left: 20px; 
+            display: inline-block; 
+        }
+        .warning-box {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 18px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 13.5px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .warning-box strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+        .metric-label {
+            font-size: 0.85em;
+            color: #666;
+        }
+        .parallel-sequence-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .sequence-branch {
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            border: 2px solid #e0e0e0;
+        }
+        .sequence-branch-header {
+            padding: 15px;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sequence-branch.electrical .sequence-branch-header {
+            background: linear-gradient(135deg, var(--electrical-color) 0%, #5a32a3 100%);
+        }
+        .sequence-branch.emc .sequence-branch-header {
+            background: linear-gradient(135deg, var(--emc-color) 0%, #e8590c 100%);
+        }
+        .sequence-branch.environment .sequence-branch-header {
+            background: linear-gradient(135deg, var(--environment-color) 0%, #0ca678 100%);
+        }
+        .sequence-branch-body {
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        .sequence-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .sequence-step {
+            background: white;
+            border: 2px solid;
+            border-radius: 8px;
+            padding: 12px 15px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        .sequence-step:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .sequence-branch.electrical .sequence-step {
+            border-color: var(--electrical-color);
+            color: var(--electrical-color);
+        }
+        .sequence-branch.emc .sequence-step {
+            border-color: var(--emc-color);
+            color: var(--emc-color);
+        }
+        .sequence-branch.environment .sequence-step {
+            border-color: var(--environment-color);
+            color: var(--environment-color);
+        }
+        .step-duration {
+            font-size: 11px;
+            font-weight: 400;
+            background: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 10px;
+            color: #666;
+        }
+        .parallel-note {
+            background: linear-gradient(135deg, #e7f3ff 0%, #d0e8ff 100%);
+            border: 2px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #0056b3;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .parallel-note strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .function-level-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 12px;
+        }
+        .function-level-table th, .function-level-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .function-level-table th {
+            background-color: #f8f9fa;
+        }
+        .level-a { color: #28a745; font-weight: bold; }
+        .level-b { color: #17a2b8; font-weight: bold; }
+        .level-c { color: #ffc107; font-weight: bold; }
+        .level-d { color: #fd7e14; font-weight: bold; }
+        .level-e { color: #d9534f; font-weight: bold; }
+        .location-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin: 2px;
+        }
+        .cost-optimization {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 18px;
+            margin-top: 20px;
+        }
+        .cost-optimization h4 {
+            margin: 0 0 12px 0;
+            color: #155724;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cost-optimization ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #155724;
+            font-size: 13px;
+        }
+        .cost-optimization li {
+            margin-bottom: 6px;
+        }
+        .total-duration-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .total-duration-box h4 {
+            margin: 0 0 10px 0;
+            font-size: 1.1em;
+        }
+        .total-duration-value {
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        .total-duration-desc {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        /* 寿命计算器样式 */
+        .input-section, .result-section {
+            background-color: #fafcff;
+            border: 1px solid #e1e5eb;
+            border-radius: 6px;
+            padding: 20px;
+        }
+        .model-btn {
+            display: inline-block;
+            padding: 10px 15px;
+            margin-right: 10px;
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .model-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .param-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .param-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .param-item label {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 0.9em;
+            color: #34495e;
+        }
+        .param-item input {
+            padding: 8px 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+        .param-item input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        .note {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #555;
+        }
+        .btn-calculate {
+            background-color: #27ae60;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-calculate:hover {
+            background-color: #219653;
+        }
+        .result-box {
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .result-title {
+            font-weight: 600;
+            color: #27ae60;
+            margin-bottom: 5px;
+        }
+        .result-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1b5e20;
+        }
+        .formula-box {
+            background-color: #f5f5f5;
+            border-left: 4px solid #9e9e9e;
+            padding: 10px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 0.95em;
+        }
+        .hidden {
+            display: none;
+        }
+        .info-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            .nav-link {
+                margin: 0 5px;
+                font-size: 0.9em;
+            }
+            .header h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#"><i class="fas fa-car me-2"></i>汽车电子零部件测试套件</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" onclick="switchTool('test-sequence')">测试序列生成器</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="switchTool('change-assessment')">变更可靠性评估</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="switchTool('life-time-calculator')">寿命预测计算器</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 测试序列生成器 -->
+    <div id="test-sequence" class="tool-container active">
+        <div class="container">
+            <!-- 配置文件状态提示 -->
+            <div id="configStatus" class="config-file-status">
+                <i class="fas fa-check-circle me-2"></i>
+                <span id="configStatusText">配置文件已加载</span>
+            </div>
+
+            <div class="header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1><i class="fas fa-cogs me-3"></i>汽车零部件测试序列生成器 - 专业版</h1>
+                        <p>支持并行/串行测试配置，智能样件复用，透明费用计算</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="config-file-info" id="configFileInfo">
+                            <i class="fas fa-file-alt me-2"></i>
+                            <strong>配置文件：</strong><span id="configFileName">未加载配置文件</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 配置文件管理 -->
+            <div class="panel">
+                <h2 class="panel-title">
+                    <i class="fas fa-file-export me-2"></i>配置文件管理
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary-custom" onclick="document.getElementById('importConfigFile').click()">
+                            <i class="fas fa-file-import me-1"></i> 导入配置文件
+                        </button>
+                        <button class="btn btn-save-custom" onclick="exportConfigFile()">
+                            <i class="fas fa-file-export me-1"></i> 导出配置文件
+                        </button>
+                        <button class="btn btn-primary-custom" onclick="resetToDefault()">
+                            <i class="fas fa-undo me-1"></i> 恢复默认配置
+                        </button>
+                    </div>
+                </h2>
+                
+                <div class="info-box">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>使用说明：</strong>
+                    <ol style="margin: 10px 0 0 20px;">
+                        <li>首次使用会加载默认配置</li>
+                        <li>修改测试项目库、产品配置等后，点击"导出配置文件"保存为 <code>config.json</code></li>
+                        <li>将 <code>index.html</code> 和 <code>config.json</code> 一起分享给他人</li>
+                        <li>他人打开 <code>index.html</code> 后，点击"导入配置文件"加载 <code>config.json</code></li>
+                    </ol>
+                </div>
+
+                <div class="file-drop-area" id="fileDropArea" 
+                     ondragover="event.preventDefault(); this.classList.add('drag-over');" 
+                     ondragleave="event.preventDefault(); this.classList.remove('drag-over');" 
+                     ondrop="handleFileDrop(event)">
+                    <i class="fas fa-cloud-upload-alt fa-3x mb-3" style="color: #3498db;"></i>
+                    <h4>拖拽配置文件到此处</h4>
+                    <p class="text-muted">或点击上方"导入配置文件"按钮</p>
+                    <input type="file" id="importConfigFile" accept=".json" style="display: none;" onchange="importConfigFile(this)">
+                </div>
+            </div>
+
+            <!-- 选项卡导航 -->
+            <div class="panel">
+                <div class="tab-nav">
+                    <div class="tab-item active" onclick="switchTab('config')">
+                        <i class="fas fa-sliders-h me-2"></i>产品配置
+                    </div>
+                    <div class="tab-item" onclick="switchTab('tests')">
+                        <i class="fas fa-clipboard-list me-2"></i>测试项目管理
+                    </div>
+                    <div class="tab-item" onclick="switchTab('sequence')">
+                        <i class="fas fa-project-diagram me-2"></i>测试序列编排
+                    </div>
+                    <div class="tab-item" onclick="switchTab('result')">
+                        <i class="fas fa-chart-gantt me-2"></i>测试结果
+                    </div>
+                </div>
+
+                <!-- 产品配置选项卡 -->
+                <div id="tab-config" class="tab-content active">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <!-- 产品类型 -->
+                            <div class="section-group">
+                                <div class="section-title"><i class="fas fa-tag me-2"></i>产品类型</div>
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="radio" name="productType" id="type-safety" value="safety" checked onchange="markConfigModified()">
+                                        <label for="type-safety">安全件 (ASIL A-D)</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="radio" name="productType" id="type-function" value="function" onchange="markConfigModified()">
+                                        <label for="type-function">功能件 (QM)</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="radio" name="productType" id="type-general" value="general" onchange="markConfigModified()">
+                                        <label for="type-general">一般件</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 安装位置 -->
+                            <div class="section-group">
+                                <div class="section-title"><i class="fas fa-map-marker-alt me-2"></i>安装位置</div>
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="radio" name="installLocation" id="loc-engine" value="engine" checked onchange="markConfigModified()">
+                                        <label for="loc-engine">发动机舱</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="radio" name="installLocation" id="loc-chassis" value="chassis" onchange="markConfigModified()">
+                                        <label for="loc-chassis">底盘</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="radio" name="installLocation" id="loc-outside" value="outside" onchange="markConfigModified()">
+                                        <label for="loc-outside">驾驶室外</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="radio" name="installLocation" id="loc-inside" value="inside" onchange="markConfigModified()">
+                                        <label for="loc-inside">驾驶室内</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="radio" name="installLocation" id="loc-info" value="info" onchange="markConfigModified()">
+                                        <label for="loc-info">信息娱乐系统</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 电气特性 -->
+                            <div class="section-group">
+                                <div class="section-title"><i class="fas fa-bolt me-2"></i>电气特性</div>
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="elec-12v" checked onchange="markConfigModified()">
+                                        <label for="elec-12v">12V 系统</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="elec-24v" onchange="markConfigModified()">
+                                        <label for="elec-24v">24V 系统</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="elec-400v" onchange="markConfigModified()">
+                                        <label for="elec-400v">高压系统 (400V+)</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="elec-comm" checked onchange="markConfigModified()">
+                                        <label for="elec-comm">通信功能 (CAN/LIN)</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="elec-wireless" onchange="markConfigModified()">
+                                        <label for="elec-wireless">无线通信 (4G/5G/WiFi)</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 环境要求 -->
+                            <div class="section-group">
+                                <div class="section-title"><i class="fas fa-cloud me-2"></i>环境要求</div>
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="env-water" checked onchange="markConfigModified()">
+                                        <label for="env-water">防水要求</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="env-dust" checked onchange="markConfigModified()">
+                                        <label for="env-dust">防尘要求</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="env-corrosion" checked onchange="markConfigModified()">
+                                        <label for="env-corrosion">耐腐蚀要求</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="env-uv" onchange="markConfigModified()">
+                                        <label for="env-uv">耐 UV 要求</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="env-chemical" onchange="markConfigModified()">
+                                        <label for="env-chemical">耐化学试剂</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <!-- 企业定制测试项目 -->
+                            <div class="section-group">
+                                <div class="section-title">
+                                    <i class="fas fa-clipboard-check me-2"></i>选择测试项目
+                                    <button class="btn btn-primary-custom" onclick="openAddTestModal()">
+                                        <i class="fas fa-plus me-1"></i> 添加测试项
+                                    </button>
+                                </div>
+                                <div class="custom-test-list" id="customTestList">
+                                    <!-- 动态加载自定义测试项目 -->
+                                </div>
+                                <div class="info-box mt-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>提示：</strong> 勾选需要包含在测试序列中的项目，然后到"测试序列编排"选项卡配置并行/串行关系
+                                </div>
+                            </div>
+
+                            <button class="btn btn-generate" onclick="goToSequenceBuilder()">
+                                <i class="fas fa-arrow-right me-2"></i>进入测试序列编排
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 测试项目管理选项卡 -->
+                <div id="tab-tests" class="tab-content">
+                    <div class="panel">
+                        <h2 class="panel-title">
+                            <i class="fas fa-database me-2"></i>测试项目库管理
+                            <button class="btn btn-primary-custom" onclick="openAddTestModal()">
+                                <i class="fas fa-plus me-1"></i> 新增测试项目
+                            </button>
+                        </h2>
+                        
+                        <div class="info-box">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>说明：</strong> 在此管理企业标准测试项目库，可添加、编辑、删除测试项目。每个测试项可设置费用和时长。
+                        </div>
+
+                        <table class="test-sequence-table">
+                            <thead>
+                                <tr>
+                                    <th>测试代码</th>
+                                    <th>测试名称</th>
+                                    <th>测试阶段</th>
+                                    <th>时长 (h)</th>
+                                    <th>费用 (元)</th>
+                                    <th>默认样件数</th>
+                                    <th>破坏性</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="test-library-body">
+                                <!-- 动态加载测试库 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 测试序列编排选项卡 -->
+                <div id="tab-sequence" class="tab-content">
+                    <div class="panel">
+                        <h2 class="panel-title">
+                            <i class="fas fa-project-diagram me-2"></i>测试序列编排
+                            <button class="btn btn-primary-custom" onclick="addParallelBranch()">
+                                <i class="fas fa-plus me-1"></i> 添加并行分支
+                            </button>
+                        </h2>
+                        
+                        <div class="info-box">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>使用说明：</strong>
+                            <ul style="margin: 10px 0 0 20px;">
+                                <li>左侧为已选测试项目，可拖拽到右侧分支中</li>
+                                <li>每个分支内的测试为<strong>串行</strong>（样件可复用）</li>
+                                <li>不同分支之间的测试为<strong>并行</strong>（需要独立样件）</li>
+                                <li>可设置每个分支的样件数量</li>
+                            </ul>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="section-group">
+                                    <div class="section-title"><i class="fas fa-list me-2"></i>已选测试项目</div>
+                                    <div id="selectedTestsList" style="max-height: 500px; overflow-y: auto;">
+                                        <!-- 动态加载已选测试 -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="section-group">
+                                    <div class="section-title"><i class="fas fa-sitemap me-2"></i>测试序列结构</div>
+                                    <div id="sequenceBranches">
+                                        <!-- 动态加载分支 -->
+                                    </div>
+                                    <button class="btn btn-primary-custom" onclick="addParallelBranch()">
+                                        <i class="fas fa-plus me-1"></i> 添加并行分支
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sample-reuse-info">
+                            <i class="fas fa-recycle me-2"></i>
+                            <strong>样件复用说明：</strong>
+                            <ul style="margin: 10px 0 0 20px;">
+                                <li><strong>串行测试（同一分支内）：</strong>样件可复用，总样件数 = 分支样件数</li>
+                                <li><strong>并行测试（不同分支）：</strong>样件独立，总样件数 = 各分支样件数之和</li>
+                                <li><strong>破坏性测试：</strong>测试后样件不可复用，需单独计算</li>
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-generate" onclick="generateSequence()">
+                            <i class="fas fa-magic me-2"></i>生成测试序列
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 测试结果选项卡 -->
+                <div id="tab-result" class="tab-content">
+                    <div class="result-area">
+                        <h2 class="panel-title"><i class="fas fa-chart-gantt me-2"></i>测试结果</h2>
+                        
+                        <div id="result-placeholder" class="text-center text-muted" style="padding: 60px 20px;">
+                            <i class="fas fa-arrow-left fa-3x mb-3"></i>
+                            <p>请在"测试序列编排"选项卡配置后点击"生成测试序列"</p>
+                        </div>
+
+                        <div id="result-content" style="display: none;">
+                            <!-- 统计信息 -->
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-label">测试项目总数</div>
+                                    <div class="stat-value" id="stat-total">0</div>
+                                </div>
+                                <div class="stat-card green">
+                                    <div class="stat-label">预计测试周期</div>
+                                    <div class="stat-value" id="stat-days">0 天</div>
+                                </div>
+                                <div class="stat-card orange">
+                                    <div class="stat-label">总测试费用</div>
+                                    <div class="stat-value" id="stat-cost">0 元</div>
+                                </div>
+                                <div class="stat-card blue">
+                                    <div class="stat-label">总样件需求</div>
+                                    <div class="stat-value" id="stat-samples">0 件</div>
+                                </div>
+                                <div class="stat-card red">
+                                    <div class="stat-label">并行分支数</div>
+                                    <div class="stat-value" id="stat-branches">0</div>
+                                </div>
+                            </div>
+
+                            <!-- 测试序列流程图 -->
+                            <div class="info-box">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>测试序列流程图：</strong> 展示并行/串行关系及样件分配
+                            </div>
+                            <div class="flow-diagram" id="flowDiagram">
+                                <!-- 动态生成流程图 -->
+                            </div>
+
+                            <!-- 详细测试计划表 -->
+                            <div class="warning-box">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>注意事项：</strong> 红色标记为破坏性测试，需要额外样件
+                            </div>
+                            <table class="test-sequence-table">
+                                <thead>
+                                    <tr>
+                                        <th>分支</th>
+                                        <th>序号</th>
+                                        <th>测试项目</th>
+                                        <th>测试代码</th>
+                                        <th>时长 (h)</th>
+                                        <th>费用 (元)</th>
+                                        <th>样件数</th>
+                                        <th>破坏性</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sequence-table-body">
+                                </tbody>
+                            </table>
+
+                            <!-- 样件复用明细 -->
+                            <div class="sample-reuse-info">
+                                <h5><i class="fas fa-recycle me-2"></i>样件复用明细</h5>
+                                <table class="test-sequence-table" style="margin-top: 10px;">
+                                    <thead>
+                                        <tr>
+                                            <th>分支</th>
+                                            <th>测试项目</th>
+                                            <th>是否破坏性</th>
+                                            <th>本测试样件</th>
+                                            <th>累计样件</th>
+                                            <th>说明</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sample-reuse-body">
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- 费用明细 -->
+                            <div class="info-box">
+                                <h5><i class="fas fa-yen-sign me-2"></i>费用明细</h5>
+                                <table class="test-sequence-table" style="margin-top: 10px;">
+                                    <thead>
+                                        <tr>
+                                            <th>测试项目</th>
+                                            <th>单次费用 (元)</th>
+                                            <th>测试次数</th>
+                                            <th>小计 (元)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cost-detail-body">
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- 导出按钮 -->
+                            <div class="mt-4">
+                                <button class="export-btn" onclick="exportPDF()">
+                                    <i class="fas fa-file-pdf me-2"></i>导出 PDF
+                                </button>
+                                <button class="export-btn" onclick="exportExcel()">
+                                    <i class="fas fa-file-excel me-2"></i>导出 Excel
+                                </button>
+                                <button class="export-btn" onclick="exportJSON()">
+                                    <i class="fas fa-file-code me-2"></i>导出 JSON
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 变更可靠性评估 -->
+    <div id="change-assessment" class="tool-container">
+        <div class="container">
+            <div class="header">
+                <h1>🚗 汽车电子硬件变更可靠性评估系统</h1>
+                <div class="subtitle">基于 AEC-Q 标准 | 移远可靠性测试标准 | 硬件变更评估规范</div>
+            </div>
+
+            <div class="standards-info">
+                <strong>📋 适用标准：</strong>
+                AEC-Q100/Q200 | ISO 16750 | GB/T 28046 | 移远汽车电子零部件可靠性测试标准 V1.0 | 硬件变更可靠性测试评估规范
+            </div>
+            
+            <div class="control-panel">
+                <div class="form-group">
+                    <label for="categorySelect">① 选择变更大类：</label>
+                    <select id="categorySelect" onchange="updateSubCategories()">
+                        <option value="">-- 请选择 --</option>
+                        <option value="pcb">PCB 设计变更</option>
+                        <option value="component">元器件变更 (Component)</option>
+                        <option value="structure">结构与机械变更</option>
+                        <option value="process">制造工艺与材料变更</option>
+                        <option value="production">产线变更</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="subCategorySelect">② 选择具体变更子项：</label>
+                    <select id="subCategorySelect" disabled onchange="showResults()">
+                        <option value="">-- 请先选择大类 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="locationSelect">③ 安装位置（影响测试等级）：</label>
+                    <select id="locationSelect" onchange="updateTestLevel()">
+                        <option value="1">车身底部（-40~70℃, IP67/69K）</option>
+                        <option value="2">车门内部区域（-40~85℃, IP55）</option>
+                        <option value="3" selected>乘客仓内非阳光直射（-40~85℃, IP53）</option>
+                        <option value="4">车身外部安装（-40~85℃, IP67）</option>
+                        <option value="5">车轮内（-40~105℃）</option>
+                        <option value="6">热辐射区域/前舱（-40~85℃, IP67）</option>
+                        <option value="7">电机/发动机附近 300mm（-40~120℃, IP67/69K）</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="result-area">
+                <div class="warning-box">
+                    <span>⚠️</span>
+                    <div>
+                        <strong>工程师重要提示：</strong>
+                        以下测试项为基于变更类型和安装位置的推荐基准。实际执行前，请务必结合具体的 DFMEA 分析报告、客户特定要求 (CSR)、零部件技术规范 (CTS) 进行最终确认。若客户要求与本标准不一致，优先以客户要求为准。
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalTests">-</div>
+                        <div class="metric-label">推荐测试项数</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="mandatoryTests">-</div>
+                        <div class="metric-label">必做测试项</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalSamples">-</div>
+                        <div class="metric-label">预估样本总量</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="estDuration">-</div>
+                        <div class="metric-label">预估测试周期</div>
+                    </div>
+                </div>
+
+                <div class="section-title">📋 推荐测试矩阵 (Test Matrix)</div>
+                
+                <div class="info-box">
+                    <h4>📊 功能状态等级定义 (参考移远标准)</h4>
+                    <table class="function-level-table">
+                        <tr>
+                            <th>功能状态</th>
+                            <th>试验前</th>
+                            <th>试验中</th>
+                            <th>试验后</th>
+                        </tr>
+                        <tr>
+                            <td class="level-a">A 级</td>
+                            <td>正常工作</td>
+                            <td>全部符合设计要求</td>
+                            <td>全部符合实际要求</td>
+                        </tr>
+                        <tr>
+                            <td class="level-b">B 级</td>
+                            <td>正常工作</td>
+                            <td>允许参数超差</td>
+                            <td>恢复至 A 级</td>
+                        </tr>
+                        <tr>
+                            <td class="level-c">C 级</td>
+                            <td>正常工作</td>
+                            <td>未能全部符合</td>
+                            <td>自动恢复至 A 级</td>
+                        </tr>
+                        <tr>
+                            <td class="level-d">D 级</td>
+                            <td>正常工作</td>
+                            <td>未能全部符合</td>
+                            <td>需上下电/复位恢复</td>
+                        </tr>
+                        <tr>
+                            <td class="level-e">E 级</td>
+                            <td>正常工作</td>
+                            <td>未能全部符合</td>
+                            <td>需修理或更换</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <table class="test-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">测试类别</th>
+                            <th style="width: 22%;">关键测试项 (标准代号)</th>
+                            <th style="width: 12%;">优先级</th>
+                            <th style="width: 10%;">样本量</th>
+                            <th style="width: 10%;">功能等级</th>
+                            <th style="width: 34%;">执行理由与关注点</th>
+                        </tr>
+                    </thead>
+                    <tbody id="testTableBody">
+                        <!-- Dynamic Content -->
+                    </tbody>
+                </table>
+
+                <div class="section-title">🔄 并行测试序列 (Parallel Test Sequence)</div>
+                
+                <div class="parallel-note">
+                    <span>💡</span>
+                    <div>
+                        <strong>并行测试说明：</strong>
+                        电性能、EMC、环境/机械三大类测试可完全并行执行，使用不同样品组同时开展，大幅缩短整体测试周期。建议提前规划样品分配，确保各类测试样品充足。
+                    </div>
+                </div>
+
+                <div class="parallel-sequence-container">
+                    <!-- 电性能分支 -->
+                    <div class="sequence-branch electrical">
+                        <div class="sequence-branch-header">
+                            <span>⚡</span>
+                            <span>电性能测试序列</span>
+                        </div>
+                        <div class="sequence-branch-body">
+                            <div class="sequence-steps" id="electricalSteps">
+                                <!-- Dynamic Content -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EMC 分支 -->
+                    <div class="sequence-branch emc">
+                        <div class="sequence-branch-header">
+                            <span>📡</span>
+                            <span>EMC 测试序列</span>
+                        </div>
+                        <div class="sequence-branch-body">
+                            <div class="sequence-steps" id="emcSteps">
+                                <!-- Dynamic Content -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 环境/机械分支 -->
+                    <div class="sequence-branch environment">
+                        <div class="sequence-branch-header">
+                            <span>🌡️</span>
+                            <span>环境/机械测试序列</span>
+                        </div>
+                        <div class="sequence-branch-body">
+                            <div class="sequence-steps" id="environmentSteps">
+                                <!-- Dynamic Content -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="total-duration-box">
+                    <h4>📅 整体测试周期估算（并行执行）</h4>
+                    <div class="total-duration-value" id="parallelDuration">-</div>
+                    <div class="total-duration-desc">取三大分支中最长周期作为整体周期</div>
+                </div>
+
+                <div class="section-title">💡 多维度专业建议 (Expert Insights)</div>
+                <div class="advice-grid">
+                    <div class="advice-card advice-card principle">
+                        <h3>🔬 硬件电路原理视角</h3>
+                        <div class="advice-content" id="advice-principle"></div>
+                    </div>
+                    <div class="advice-card advice-card aging">
+                        <h3>⏳ 老化与寿命视角</h3>
+                        <div class="advice-content" id="advice-aging"></div>
+                    </div>
+                    <div class="advice-card advice-card profit">
+                        <h3>💰 成本与周期视角</h3>
+                        <div class="advice-content" id="advice-profit"></div>
+                    </div>
+                    <div class="advice-card advice-card quality">
+                        <h3>🎯 质量与风险视角</h3>
+                        <div class="advice-content" id="advice-quality"></div>
+                    </div>
+                </div>
+
+                <div class="cost-optimization" id="costOptimization">
+                    <h4>💵 成本优化建议</h4>
+                    <ul id="costOptList">
+                        <!-- Dynamic Content -->
+                    </ul>
+                </div>
+
+                <div class="section-title">📍 安装位置温度分布参考</div>
+                <div id="locationInfo">
+                    <!-- Dynamic Content -->
+                </div>
+
+                <div class="legend">
+                    <span><span class="badge badge-mandatory">● 必做</span> 高风险，必须执行</span>
+                    <span><span class="badge badge-optional">○ 可选</span> 视风险评估而定</span>
+                    <span><span class="badge badge-tbd">△ 待议</span> 需与客户确认</span>
+                    <span><span class="sample-badge">6pcs</span> 标准样本量</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 寿命预测计算器 -->
+    <div id="life-time-calculator" class="tool-container">
+        <div class="container">
+            <header>
+                <h1>车载电子零部件寿命预测计算器</h1>
+                <div class="subtitle">基于加速老化模型的耐久性测试时间预测工具</div>
+            </header>
+
+            <div class="main-content">
+                <div class="input-section">
+                    <h2 class="section-title">输入参数</h2>
+                    
+                    <div class="model-selector">
+                        <button class="model-btn active" onclick="selectModel('hp')">Hallberg-Peck Model (K-14b)</button>
+                        <button class="model-btn" onclick="selectModel('arr')">Arrhenius Model (L-02)</button>
+                        <button class="model-btn" onclick="selectModel('cm')">Coffin-Manson Model (L-03)</button>
+                    </div>
+
+                    <div id="model-hp" class="model-form">
+                        <p class="info-text">该模型用于评估湿度和温度共同作用下的加速效应。</p>
+                        <div class="formula-box">
+                            AF = (RH<sub>Test</sub>/RH<sub>Parking,Field</sub>)<sup>3</sup> × exp{[(E<sub>A</sub>/k) × (1/(T<sub>Parking,Field</sub> + 273.15) - 1/(T<sub>Test</sub> + 273.15))]}
+                        </div>
+                        <div class="param-grid">
+                            <div class="param-item">
+                                <label for="hp-EA">E<sub>A</sub> (激活能 eV)</label>
+                                <input type="number" id="hp-EA" value="0.6" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="hp-k">k (Boltzmann常数 eV/K)</label>
+                                <input type="number" id="hp-k" value="0.00008617" step="any" readonly>
+                            </div>
+                            <div class="param-item">
+                                <label for="hp-Ttest">T<sub>Test</sub> (测试温度 °C)</label>
+                                <input type="number" id="hp-Ttest" value="65" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="hp-TParkingField">T<sub>Parking,Field</sub> (现场停车温度 °C)</label>
+                                <input type="number" id="hp-TParkingField" value="23" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="hp-RHTest">RH<sub>Test</sub> (测试相对湿度 %)</label>
+                                <input type="number" id="hp-RHTest" value="93" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="hp-RHParkingField">RH<sub>Parking,Field</sub> (现场停车湿度 %)</label>
+                                <input type="number" id="hp-RHParkingField" value="60" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="hp-tParkingField">t<sub>Parking,Field</sub> (现场停车时间 h)</label>
+                                <input type="number" id="hp-tParkingField" value="87600" step="any">
+                            </div>
+                        </div>
+                        <div class="note">
+                            <strong>注意:</strong> 所有参数需根据实际应用场景和标准要求填写。
+                        </div>
+                    </div>
+
+                    <div id="model-arr" class="model-form hidden">
+                        <p class="info-text">该模型适用于评估温度单一应力下的加速效应，分为两种情况。</p>
+                        <div class="formula-box">
+                            AF = exp((E<sub>A</sub>/k) × (1/T<sub>use</sub> - 1/T<sub>test</sub>))
+                        </div>
+                        <div class="model-sub-selector">
+                            <button class="model-btn active" style="margin-bottom: 10px;" onclick="selectArrSubModel('arr1')">无高温性能衰减</button>
+                            <button class="model-btn" style="margin-bottom: 10px;" onclick="selectArrSubModel('arr2')">有高温性能衰减</button>
+                        </div>
+                        <div id="arr-model1">
+                            <div class="param-grid">
+                                <div class="param-item">
+                                    <label for="arr-EA">E<sub>A</sub> (激活能 eV)</label>
+                                    <input type="number" id="arr-EA" value="0.45" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-k">k (Boltzmann常数 eV/K)</label>
+                                    <input type="number" id="arr-k" value="0.00008617" step="any" readonly>
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-Ttest">T<sub>test</sub> (测试温度 Tmax °C)</label>
+                                    <input type="number" id="arr-Ttest" value="85" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-toper">t<sub>oper</sub> (现场运行时间 h)</label>
+                                    <input type="number" id="arr-toper" value="12500" step="any">
+                                </div>
+                            </div>
+                            <h3 style="margin: 15px 0 10px; font-size: 1.1em;">现场温度谱及占比</h3>
+                            <div class="param-grid">
+                                <div class="param-item">
+                                    <label for="arr-TF1">T<sub>Field,1</sub> (°C)</label>
+                                    <input type="number" id="arr-TF1" value="-40" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-p1">p<sub>1</sub> (占比)</label>
+                                    <input type="number" id="arr-p1" value="0.02" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-TF2">T<sub>Field,2</sub> (°C)</label>
+                                    <input type="number" id="arr-TF2" value="10" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-p2">p<sub>2</sub> (占比)</label>
+                                    <input type="number" id="arr-p2" value="0.08" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-TF3">T<sub>Field,3</sub> (°C)</label>
+                                    <input type="number" id="arr-TF3" value="23" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-p3">p<sub>3</sub> (占比)</label>
+                                    <input type="number" id="arr-p3" value="0.14" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-TF4">T<sub>Field,4</sub> (°C)</label>
+                                    <input type="number" id="arr-TF4" value="40" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-p4">p<sub>4</sub> (占比)</label>
+                                    <input type="number" id="arr-p4" value="0.6" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-TF5">T<sub>Field,5</sub> (°C)</label>
+                                    <input type="number" id="arr-TF5" value="65" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-p5">p<sub>5</sub> (占比)</label>
+                                    <input type="number" id="arr-p5" value="0.09" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-TF6">T<sub>Field,6</sub> (°C)</label>
+                                    <input type="number" id="arr-TF6" value="75" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-p6">p<sub>6</sub> (占比)</label>
+                                    <input type="number" id="arr-p6" value="0.06" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-TF7">T<sub>Field,7</sub> (°C)</label>
+                                    <input type="number" id="arr-TF7" value="85" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr-p7">p<sub>7</sub> (占比)</label>
+                                    <input type="number" id="arr-p7" value="0.01" step="any">
+                                </div>
+                            </div>
+                            <div class="note">
+                                <strong>注意:</strong> 温度谱和占比需根据零件spec或企标附录填写。
+                            </div>
+                        </div>
+                        <div id="arr-model2" class="hidden">
+                            <div class="param-grid">
+                                <div class="param-item">
+                                    <label for="arr2-EA">E<sub>A</sub> (激活能 eV)</label>
+                                    <input type="number" id="arr2-EA" value="0.45" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-k">k (Boltzmann常数 eV/K)</label>
+                                    <input type="number" id="arr2-k" value="0.00008617" step="any" readonly>
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-TopMax">T<sub>op,Max</sub> (性能衰减临界温度 °C)</label>
+                                    <input type="number" id="arr2-TopMax" value="85" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-Ttest">T<sub>test</sub> (Tmax °C)</label>
+                                    <input type="number" id="arr2-Ttest" value="105" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-toper">t<sub>oper</sub> (现场运行时间 h)</label>
+                                    <input type="number" id="arr2-toper" value="12500" step="any">
+                                </div>
+                            </div>
+                            <h3 style="margin: 15px 0 10px; font-size: 1.1em;">现场温度谱及占比</h3>
+                            <div class="param-grid">
+                                <div class="param-item">
+                                    <label for="arr2-TF1">T<sub>Field,1</sub> (°C)</label>
+                                    <input type="number" id="arr2-TF1" value="-40" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-p1">p<sub>1</sub> (占比)</label>
+                                    <input type="number" id="arr2-p1" value="0.02" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-TF2">T<sub>Field,2</sub> (°C)</label>
+                                    <input type="number" id="arr2-TF2" value="10" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-p2">p<sub>2</sub> (占比)</label>
+                                    <input type="number" id="arr2-p2" value="0.08" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-TF3">T<sub>Field,3</sub> (°C)</label>
+                                    <input type="number" id="arr2-TF3" value="23" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-p3">p<sub>3</sub> (占比)</label>
+                                    <input type="number" id="arr2-p3" value="0.14" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-TF4">T<sub>Field,4</sub> (°C)</label>
+                                    <input type="number" id="arr2-TF4" value="45" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-p4">p<sub>4</sub> (占比)</label>
+                                    <input type="number" id="arr2-p4" value="0.55" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-TF5">T<sub>Field,5</sub> (°C)</label>
+                                    <input type="number" id="arr2-TF5" value="70" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-p5">p<sub>5</sub> (占比)</label>
+                                    <input type="number" id="arr2-p5" value="0.12" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-TF6">T<sub>Field,6</sub> (°C)</label>
+                                    <input type="number" id="arr2-TF6" value="90" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-p6">p<sub>6</sub> (占比)</label>
+                                    <input type="number" id="arr2-p6" value="0.08" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-TF7">T<sub>Field,7</sub> (°C)</label>
+                                    <input type="number" id="arr2-TF7" value="105" step="any">
+                                </div>
+                                <div class="param-item">
+                                    <label for="arr2-p7">p<sub>7</sub> (占比)</label>
+                                    <input type="number" id="arr2-p7" value="0.01" step="any">
+                                </div>
+                            </div>
+                            <div class="note">
+                                <strong>注意:</strong> 需分别计算T<sub>op,Max</sub>和T<sub>max</sub>下的测试时间，总时间为两者之和。
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="model-cm" class="model-form hidden">
+                        <p class="info-text">该模型用于评估热循环疲劳寿命。</p>
+                        <div class="formula-box">
+                            A<sub>CM</sub> = ((ΔT<sub>test</sub>) / (ΔT<sub>field</sub>))<sup>c</sup>
+                        </div>
+                        <div class="param-grid">
+                            <div class="param-item">
+                                <label for="cm-deltaTField">ΔT<sub>field</sub> (现场平均温差 °C)</label>
+                                <input type="number" id="cm-deltaTField" value="36" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="cm-deltaTTest">ΔT<sub>test</sub> (测试温差 °C)</label>
+                                <input type="number" id="cm-deltaTTest" value="125" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="cm-c">c (Coffin-Manson系数)</label>
+                                <input type="number" id="cm-c" value="2.5" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="cm-NField">N<sub>Field</sub> (现场循环次数)</label>
+                                <input type="number" id="cm-NField" value="7300" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="cm-Tgrad">T<sub>grad</sub> (温度梯度 °C/min)</label>
+                                <input type="number" id="cm-Tgrad" value="4" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="cm-Tmin">T<sub>min</sub> (最低温度 °C)</label>
+                                <input type="number" id="cm-Tmin" value="-40" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="cm-Tmax">T<sub>max</sub> (最高温度 °C)</label>
+                                <input type="number" id="cm-Tmax" value="85" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="cm-TminHold">T<sub>min</sub>停留时间 (min)</label>
+                                <input type="number" id="cm-TminHold" value="30" step="any">
+                            </div>
+                            <div class="param-item">
+                                <label for="cm-TmaxHold">T<sub>max</sub>停留时间 (min)</label>
+                                <input type="number" id="cm-TmaxHold" value="30" step="any">
+                            </div>
+                        </div>
+                        <div class="note">
+                            <strong>注意:</strong> ΔT<sub>test</sub> = T<sub>max</sub> - T<sub>min</sub>; c取值：无铅焊料2.65，有铅焊料2.5; N<sub>Field</sub>通常按10年每天2次循环估算。
+                        </div>
+                    </div>
+
+                    <button class="btn-calculate" onclick="calculate()">计算测试时间</button>
+                </div>
+
+                <div class="result-section">
+                    <h2 class="section-title">计算结果</h2>
+                    <div id="results-container">
+                        <div class="result-box">
+                            <div class="result-title">加速因子 (AF)</div>
+                            <div class="result-value" id="result-AF">-</div>
+                        </div>
+                        <div class="result-box">
+                            <div class="result-title">等效现场时间 (h)</div>
+                            <div class="result-value" id="result-time-equiv">-</div>
+                        </div>
+                        <div class="result-box">
+                            <div class="result-title">推荐测试时间 (h)</div>
+                            <div class="result-value" id="result-test-time">-</div>
+                        </div>
+                        <div class="result-box">
+                            <div class="result-title">详细中间值</div>
+                            <pre id="result-details" style="background: none; border: none; padding: 0; margin: 0; font-size: 0.9em; color: #555;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑测试项目模态框 -->
+    <div class="modal fade" id="testModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle"><i class="fas fa-plus-circle me-2"></i>添加测试项目</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="testForm">
+                        <input type="hidden" id="editIndex" value="-1">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="testCode">测试代码 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="testCode" placeholder="如：K-01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="testName">测试名称 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="testName" placeholder="如：功能测试" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="testPhase">测试阶段 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="testPhase" required>
+                                        <option value="1">阶段 1 - 初始验证</option>
+                                        <option value="2">阶段 2 - 环境适应性</option>
+                                        <option value="3">阶段 3 - 机械耐久性</option>
+                                        <option value="4">阶段 4 - 寿命与可靠性</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="testDuration">时长 (h) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="testDuration" step="0.5" value="8" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="testCost">费用 (元) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="testCost" value="1000" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="testSamples">默认样件数 <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="testSamples" value="3" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>破坏性测试</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="testDestructive">
+                                        <label class="form-check-label" for="testDestructive">
+                                            是破坏性测试（测试后样品不可复用）
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="testDescription">测试描述/标准依据</label>
+                            <textarea class="form-control" id="testDescription" rows="3" placeholder="如：ISO 16750-2 第 4.1 节"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveTest()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 初始化 mermaid
+        mermaid.initialize({ startOnLoad: false });
+
+        // 工具切换函数
+        function switchTool(toolId) {
+            // 隐藏所有工具容器
+            document.querySelectorAll('.tool-container').forEach(container => {
+                container.classList.remove('active');
+            });
+            
+            // 显示选中的工具
+            document.getElementById(toolId).classList.add('active');
+            
+            // 更新导航栏样式
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // ==================== 测试序列生成器相关代码 ====================
+        let configData = {
+            version: "3.0",
+            lastModified: new Date().toISOString(),
+            testLibrary: [
+                { code: 'K-01', name: '初始功能测试', phase: 1, duration: 2, cost: 500, samples: 3, destructive: false, description: '验证产品基本功能' },
+                { code: 'K-02', name: '外观检查', phase: 1, duration: 0.5, cost: 200, samples: 3, destructive: false, description: '外观质量检查' },
+                { code: 'K-03', name: '尺寸检查', phase: 1, duration: 1, cost: 300, samples: 5, destructive: false, description: '关键尺寸测量' },
+                { code: 'K-04', name: '温度循环', phase: 2, duration: 168, cost: 5000, samples: 5, destructive: false, description: 'ISO 16750-4' },
+                { code: 'K-05', name: '湿热测试', phase: 2, duration: 504, cost: 8000, samples: 5, destructive: false, description: 'ISO 16750-4' },
+                { code: 'K-06', name: '防水测试', phase: 2, duration: 8, cost: 2000, samples: 5, destructive: false, description: 'ISO 20653' },
+                { code: 'K-08', name: '盐雾测试', phase: 3, duration: 144, cost: 6000, samples: 5, destructive: false, description: 'ISO 9227' },
+                { code: 'K-10', name: '最终功能测试', phase: 4, duration: 2, cost: 500, samples: 5, destructive: false, description: '测试后功能验证' },
+                { code: 'K-11', name: '拆解检查', phase: 4, duration: 4, cost: 1000, samples: 5, destructive: true, description: '破坏性拆解' },
+                { code: 'K-12', name: '材料分析', phase: 4, duration: 8, cost: 3000, samples: 5, destructive: true, description: '材料性能分析' },
+                { code: 'M-01', name: '随机振动', phase: 3, duration: 24, cost: 4000, samples: 5, destructive: false, description: 'ISO 16750-3' },
+                { code: 'M-03', name: '机械冲击', phase: 3, duration: 4, cost: 2000, samples: 3, destructive: false, description: 'ISO 16750-3' },
+                { code: 'E-01', name: '电气负载', phase: 1, duration: 8, cost: 1500, samples: 3, destructive: false, description: 'ISO 16750-2' },
+                { code: 'E-04', name: 'EMC 测试', phase: 2, duration: 40, cost: 10000, samples: 3, destructive: false, description: 'CISPR 25' },
+                { code: 'S-01', name: '功能安全', phase: 1, duration: 80, cost: 15000, samples: 3, destructive: false, description: 'ISO 26262' }
+            ],
+            productConfig: {
+                productType: 'safety',
+                installLocation: 'engine',
+                'elec-12v': true,
+                'elec-24v': false,
+                'elec-400v': false,
+                'elec-comm': true,
+                'elec-wireless': false,
+                'env-water': true,
+                'env-dust': true,
+                'env-corrosion': true,
+                'env-uv': false,
+                'env-chemical': false
+            },
+            sequenceBranches: [],
+            sequenceHistory: []
+        };
+
+        // 全局变量
+        let currentSequence = [];
+        let isConfigModified = false;
+        let draggedTest = null;
+
+        // ==================== 配置文件管理 ====================
+        function loadConfigFile() {
+            // 模拟加载默认配置
+            document.getElementById('configFileName').textContent = '使用默认配置';
+            document.getElementById('configFileInfo').className = 'config-file-info';
+            showConfigStatus('使用默认配置', 'info');
+        }
+
+        function importConfigFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedConfig = JSON.parse(e.target.result);
+                    if (!importedConfig.version || !importedConfig.testLibrary) {
+                        throw new Error('配置文件格式不正确');
+                    }
+                    configData = importedConfig;
+                    loadTestLibrary();
+                    renderCustomTestList();
+                    loadProductConfig();
+                    renderSequenceBranches();
+                    document.getElementById('configFileName').textContent = file.name;
+                    showConfigStatus('配置文件导入成功', 'success');
+                    isConfigModified = false;
+                    input.value = '';
+                } catch (err) {
+                    showConfigStatus('配置文件导入失败：' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function handleFileDrop(event) {
+            event.preventDefault();
+            document.getElementById('fileDropArea').classList.remove('drag-over');
+            const file = event.dataTransfer.files[0];
+            if (file && file.name.endsWith('.json')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedConfig = JSON.parse(e.target.result);
+                        if (!importedConfig.version || !importedConfig.testLibrary) {
+                            throw new Error('配置文件格式不正确');
+                        }
+                        configData = importedConfig;
+                        loadTestLibrary();
+                        renderCustomTestList();
+                        loadProductConfig();
+                        renderSequenceBranches();
+                        document.getElementById('configFileName').textContent = file.name;
+                        showConfigStatus('配置文件导入成功', 'success');
+                        isConfigModified = false;
+                    } catch (err) {
+                        showConfigStatus('配置文件导入失败：' + err.message, 'error');
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                showConfigStatus('请拖拽 JSON 配置文件', 'error');
+            }
+        }
+
+        function setupFileDrop() {
+            const dropArea = document.getElementById('fileDropArea');
+            dropArea.addEventListener('click', function() {
+                document.getElementById('importConfigFile').click();
+            });
+        }
+
+        function exportConfigFile() {
+            configData.lastModified = new Date().toISOString();
+            const dataStr = JSON.stringify(configData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'config.json';
+            a.click();
+            showConfigStatus('配置文件已导出', 'success');
+            isConfigModified = false;
+            document.getElementById('configFileName').textContent = 'config.json (已导出)';
+        }
+
+        function resetToDefault() {
+            if (!confirm('确定要恢复默认配置吗？')) return;
+            location.reload();
+        }
+
+        function markConfigModified() {
+            isConfigModified = true;
+        }
+
+        function showConfigStatus(message, type) {
+            const status = document.getElementById('configStatus');
+            const text = document.getElementById('configStatusText');
+            text.textContent = message;
+            status.className = `config-file-status ${type}`;
+            status.style.display = 'block';
+            setTimeout(() => { status.style.display = 'none'; }, 3000);
+        }
+
+        // ==================== 测试项目库管理 ====================
+        function loadTestLibrary() {
+            const tbody = document.getElementById('test-library-body');
+            tbody.innerHTML = '';
+            
+            configData.testLibrary.forEach((test, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td><span class="test-code">${test.code}</span></td>
+                    <td>${test.name}</td>
+                    <td><span class="phase-badge phase-${test.phase}">阶段${test.phase}</span></td>
+                    <td>${test.duration} h</td>
+                    <td><span class="test-cost">${test.cost}元</span></td>
+                    <td>${test.samples}</td>
+                    <td>${test.destructive ? '<span style="color: red;">✓</span>' : '-'}</td>
+                    <td>
+                        <button class="btn-edit-custom" onclick="editTest(${index})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-danger-custom" onclick="deleteTest(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+            });
+        }
+
+        function renderCustomTestList() {
+            const container = document.getElementById('customTestList');
+            container.innerHTML = '';
+            
+            configData.testLibrary.forEach((test, index) => {
+                const item = document.createElement('div');
+                item.className = 'custom-test-item';
+                item.innerHTML = `
+                    <div style="display: flex; align-items: center; flex: 1;">
+                        <input type="checkbox" class="test-select" id="test-${test.code}" data-index="${index}" data-code="${test.code}" onchange="updateSelectedTestsList()">
+                        <label for="test-${test.code}" style="margin: 0 0 0 10px; cursor: pointer; flex: 1;">
+                            <strong>${test.name}</strong> <span class="test-code">${test.code}</span>
+                            <span class="test-duration">${test.duration}h</span>
+                            <span class="test-cost">${test.cost}元</span>
+                        </label>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function openAddTestModal() {
+            document.getElementById('editIndex').value = '-1';
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle me-2"></i>添加测试项目';
+            document.getElementById('testForm').reset();
+            new bootstrap.Modal(document.getElementById('testModal')).show();
+        }
+
+        function editTest(index) {
+            const test = configData.testLibrary[index];
+            document.getElementById('editIndex').value = index;
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>编辑测试项目';
+            document.getElementById('testCode').value = test.code;
+            document.getElementById('testName').value = test.name;
+            document.getElementById('testPhase').value = test.phase;
+            document.getElementById('testDuration').value = test.duration;
+            document.getElementById('testCost').value = test.cost;
+            document.getElementById('testSamples').value = test.samples;
+            document.getElementById('testDestructive').checked = test.destructive;
+            document.getElementById('testDescription').value = test.description || '';
+            new bootstrap.Modal(document.getElementById('testModal')).show();
+        }
+
+        function saveTest() {
+            const index = parseInt(document.getElementById('editIndex').value);
+            const test = {
+                code: document.getElementById('testCode').value,
+                name: document.getElementById('testName').value,
+                phase: parseInt(document.getElementById('testPhase').value),
+                duration: parseFloat(document.getElementById('testDuration').value),
+                cost: parseInt(document.getElementById('testCost').value),
+                samples: parseInt(document.getElementById('testSamples').value),
+                destructive: document.getElementById('testDestructive').checked,
+                description: document.getElementById('testDescription').value
+            };
+
+            if (!test.code || !test.name) {
+                alert('请填写测试代码和名称');
+                return;
+            }
+
+            const duplicate = configData.testLibrary.findIndex(t => t.code === test.code && configData.testLibrary.indexOf(t) !== index);
+            if (duplicate !== -1) {
+                alert('测试代码已存在');
+                return;
+            }
+
+            if (index === -1) {
+                configData.testLibrary.push(test);
+            } else {
+                configData.testLibrary[index] = test;
+            }
+
+            loadTestLibrary();
+            renderCustomTestList();
+            updateSelectedTestsList();
+            markConfigModified();
+            bootstrap.Modal.getInstance(document.getElementById('testModal')).hide();
+            showConfigStatus('测试项目已保存', 'success');
+        }
+
+        function deleteTest(index) {
+            if (confirm('确定要删除这个测试项目吗？')) {
+                configData.testLibrary.splice(index, 1);
+                loadTestLibrary();
+                renderCustomTestList();
+                updateSelectedTestsList();
+                markConfigModified();
+                showConfigStatus('测试项目已删除', 'success');
+            }
+        }
+
+        // ==================== 产品配置管理 ====================
+        function loadProductConfig() {
+            const config = configData.productConfig;
+            if (config.productType) {
+                const radio = document.querySelector(`input[name="productType"][value="${config.productType}"]`);
+                if (radio) radio.checked = true;
+            }
+            if (config.installLocation) {
+                const radio = document.querySelector(`input[name="installLocation"][value="${config.installLocation}"]`);
+                if (radio) radio.checked = true;
+            }
+            ['elec-12v', 'elec-24v', 'elec-400v', 'elec-comm', 'elec-wireless'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && config[id] !== undefined) el.checked = config[id];
+            });
+            ['env-water', 'env-dust', 'env-corrosion', 'env-uv', 'env-chemical'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && config[id] !== undefined) el.checked = config[id];
+            });
+        }
+
+        // ==================== 测试序列编排 ====================
+        function updateSelectedTestsList() {
+            const container = document.getElementById('selectedTestsList');
+            container.innerHTML = '';
+            
+            document.querySelectorAll('.test-select:checked').forEach(checkbox => {
+                const index = parseInt(checkbox.dataset.index);
+                const test = configData.testLibrary[index];
+                const item = document.createElement('div');
+                item.className = 'branch-item';
+                item.draggable = true;
+                item.innerHTML = `
+                    <i class="fas fa-grip-vertical me-2" style="color: #7f8c8d;"></i>
+                    <span><strong>${test.code}</strong> ${test.name}</span>
+                    <span class="sample-badge">${test.samples}件</span>
+                    <span class="cost-badge">${test.cost}元</span>
+                `;
+                item.ondragstart = function(e) {
+                    draggedTest = { ...test, originalIndex: index };
+                    e.dataTransfer.setData('text/plain', JSON.stringify(draggedTest));
+                };
+                container.appendChild(item);
+            });
+
+            renderSequenceBranches();
+        }
+
+        function addParallelBranch() {
+            if (!configData.sequenceBranches) {
+                configData.sequenceBranches = [];
+            }
+            configData.sequenceBranches.push({
+                id: Date.now(),
+                samples: 3,
+                tests: []
+            });
+            markConfigModified();
+            renderSequenceBranches();
+        }
+
+        function renderSequenceBranches() {
+            const container = document.getElementById('sequenceBranches');
+            container.innerHTML = '';
+            
+            if (!configData.sequenceBranches || configData.sequenceBranches.length === 0) {
+                container.innerHTML = '<div class="info-box">暂无分支，点击"添加并行分支"创建</div>';
+                return;
+            }
+
+            configData.sequenceBranches.forEach((branch, branchIndex) => {
+                const branchDiv = document.createElement('div');
+                branchDiv.className = 'branch-container';
+                branchDiv.innerHTML = `
+                    <div style="flex: 1;">
+                        <div class="branch-header">
+                            <span><i class="fas fa-code-branch me-2"></i>分支 ${branchIndex + 1} (并行)</span>
+                            <div>
+                                <label style="font-size: 0.9em;">样件数:</label>
+                                <input type="number" value="${branch.samples}" min="1" 
+                                       style="width: 60px; padding: 5px;" 
+                                       onchange="updateBranchSamples(${branchIndex}, this.value)">
+                                <button class="btn btn-danger-custom ms-2" onclick="removeBranch(${branchIndex})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="branch-tests" id="branch-${branch.id}" 
+                             ondragover="event.preventDefault()" 
+                             ondrop="handleDrop(event, ${branchIndex})"
+                             style="min-height: 100px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(branchDiv);
+
+                const testsContainer = branchDiv.querySelector(`#branch-${branch.id}`);
+                if (branch.tests && branch.tests.length > 0) {
+                    branch.tests.forEach((test, testIndex) => {
+                        const testItem = document.createElement('div');
+                        testItem.className = 'sequential-item';
+                        testItem.innerHTML = `
+                            <div class="branch-item">
+                                <i class="fas fa-grip-vertical me-2" style="color: #7f8c8d;"></i>
+                                <span><strong>${test.code}</strong> ${test.name}</span>
+                                <span class="sample-badge">${test.samples}件</span>
+                                <span class="cost-badge">${test.cost}元</span>
+                                ${test.destructive ? '<span style="color: red; margin-left: 5px;">⚠破坏性</span>' : ''}
+                                <button class="btn btn-danger-custom ms-auto" onclick="removeTestFromBranch(${branchIndex}, ${testIndex})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        `;
+                        testsContainer.appendChild(testItem);
+                    });
+                } else {
+                    testsContainer.innerHTML = '<div class="text-muted text-center" style="padding: 20px;">拖拽测试项目到此处</div>';
+                }
+            });
+        }
+
+        function handleDrop(event, branchIndex) {
+            event.preventDefault();
+            if (draggedTest) {
+                if (!configData.sequenceBranches[branchIndex].tests) {
+                    configData.sequenceBranches[branchIndex].tests = [];
+                }
+                configData.sequenceBranches[branchIndex].tests.push({ ...draggedTest });
+                markConfigModified();
+                renderSequenceBranches();
+                draggedTest = null;
+            }
+        }
+
+        function updateBranchSamples(branchIndex, value) {
+            configData.sequenceBranches[branchIndex].samples = parseInt(value) || 1;
+            markConfigModified();
+        }
+
+        function removeBranch(branchIndex) {
+            if (confirm('确定要删除这个分支吗？')) {
+                configData.sequenceBranches.splice(branchIndex, 1);
+                markConfigModified();
+                renderSequenceBranches();
+            }
+        }
+
+        function removeTestFromBranch(branchIndex, testIndex) {
+            configData.sequenceBranches[branchIndex].tests.splice(testIndex, 1);
+            markConfigModified();
+            renderSequenceBranches();
+        }
+
+        function goToSequenceBuilder() {
+            updateSelectedTestsList();
+            switchTab('sequence');
+            document.querySelectorAll('.tab-item')[2].click();
+        }
+
+        // ==================== 生成测试序列 ====================
+        function generateSequence() {
+            if (!configData.sequenceBranches || configData.sequenceBranches.length === 0) {
+                alert('请先在"测试序列编排"选项卡配置测试序列');
+                return;
+            }
+
+            currentSequence = [];
+            let totalSamples = 0;
+            let totalCost = 0;
+            let totalHours = 0;
+
+            configData.sequenceBranches.forEach((branch, branchIndex) => {
+                if (!branch.tests || branch.tests.length === 0) return;
+
+                let branchSamples = branch.samples;
+                let branchCost = 0;
+                let branchHours = 0;
+
+                branch.tests.forEach((test, testIndex) => {
+                    const isDestructive = test.destructive;
+                    const samplesForThisTest = isDestructive ? branchSamples : (testIndex === 0 ? branchSamples : branchSamples);
+                    
+                    const testCost = test.cost * samplesForThisTest;
+                    branchCost += testCost;
+                    branchHours += test.duration;
+
+                    currentSequence.push({
+                        branch: branchIndex + 1,
+                        sequence: testIndex + 1,
+                        ...test,
+                        samplesUsed: samplesForThisTest,
+                        cost: testCost,
+                        isDestructive: isDestructive,
+                        cumulativeSamples: branchSamples
+                    });
+                });
+
+                totalSamples += branchSamples;
+                totalCost += branchCost;
+                totalHours = Math.max(totalHours, branchHours);
+            });
+
+            switchTab('result');
+            document.querySelectorAll('.tab-item')[3].click();
+
+            document.getElementById('result-placeholder').style.display = 'none';
+            document.getElementById('result-content').style.display = 'block';
+
+            // 更新统计
+            document.getElementById('stat-total').textContent = currentSequence.length;
+            document.getElementById('stat-days').textContent = Math.ceil(totalHours / 24) + ' 天';
+            document.getElementById('stat-cost').textContent = totalCost.toLocaleString() + ' 元';
+            document.getElementById('stat-samples').textContent = totalSamples + ' 件';
+            document.getElementById('stat-branches').textContent = configData.sequenceBranches.length;
+
+            // 生成流程图
+            generateFlowDiagram();
+            
+            // 生成详细表格
+            generateSequenceTable();
+            
+            // 生成样件复用明细
+            generateSampleReuseTable();
+            
+            // 生成费用明细
+            generateCostDetailTable();
+        }
+
+        function generateFlowDiagram() {
+            const container = document.getElementById('flowDiagram');
+            container.innerHTML = '';
+
+            // 开始节点
+            const startNode = document.createElement('div');
+            startNode.className = 'flow-node';
+            startNode.style.background = '#27ae60';
+            startNode.innerHTML = '<i class="fas fa-play"></i><br>开始';
+            container.appendChild(startNode);
+
+            container.innerHTML += '<div class="flow-connection">↓</div>';
+
+            // 并行分支
+            const branchesContainer = document.createElement('div');
+            branchesContainer.style.display = 'flex';
+            branchesContainer.style.justifyContent = 'center';
+            branchesContainer.style.gap = '20px';
+            branchesContainer.style.flexWrap = 'wrap';
+
+            configData.sequenceBranches.forEach((branch, index) => {
+                if (!branch.tests || branch.tests.length === 0) return;
+
+                const branchDiv = document.createElement('div');
+                branchDiv.className = 'flow-branch';
+                branchDiv.innerHTML = `
+                    <div style="font-weight: 600; margin-bottom: 10px; color: #2c3e50;">
+                        <i class="fas fa-code-branch"></i> 分支${index + 1}
+                        <span class="sample-badge">${branch.samples}件</span>
+                    </div>
+                `;
+
+                branch.tests.forEach((test, testIndex) => {
+                    const testNode = document.createElement('div');
+                    testNode.className = 'flow-node';
+                    testNode.style.background = test.destructive ? '#e74c3c' : '#3498db';
+                    testNode.style.margin = '5px 0';
+                    testNode.innerHTML = `
+                        <strong>${test.code}</strong><br>
+                        <small>${test.name}</small><br>
+                        <small>${test.duration}h | ${test.cost}元</small>
+                    `;
+                    branchDiv.appendChild(testNode);
+
+                    if (testIndex < branch.tests.length - 1) {
+                        const arrow = document.createElement('div');
+                        arrow.className = 'flow-connection';
+                        arrow.innerHTML = '↓';
+                        arrow.style.fontSize = '1em';
+                        branchDiv.appendChild(arrow);
+                    }
+                });
+
+                branchesContainer.appendChild(branchDiv);
+            });
+
+            container.appendChild(branchesContainer);
+            container.innerHTML += '<div class="flow-connection">↓</div>';
+
+            // 结束节点
+            const endNode = document.createElement('div');
+            endNode.className = 'flow-node';
+            endNode.style.background = '#27ae60';
+            endNode.innerHTML = '<i class="fas fa-check"></i><br>完成';
+            container.appendChild(endNode);
+        }
+
+        function generateSequenceTable() {
+            const tbody = document.getElementById('sequence-table-body');
+            tbody.innerHTML = '';
+
+            currentSequence.forEach(item => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td><span class="phase-badge phase-${item.branch}">分支${item.branch}</span></td>
+                    <td>${item.sequence}</td>
+                    <td>${item.name}</td>
+                    <td><span class="test-code">${item.code}</span></td>
+                    <td>${item.duration} h</td>
+                    <td><span class="test-cost">${item.cost.toLocaleString()}元</span></td>
+                    <td>${item.samplesUsed}</td>
+                    <td>${item.isDestructive ? '<span style="color: red;">✓</span>' : '-'}</td>
+                `;
+            });
+        }
+
+        function generateSampleReuseTable() {
+            const tbody = document.getElementById('sample-reuse-body');
+            tbody.innerHTML = '';
+
+            configData.sequenceBranches.forEach((branch, branchIndex) => {
+                if (!branch.tests || branch.tests.length === 0) return;
+
+                let cumulativeSamples = branch.samples;
+
+                branch.tests.forEach((test, testIndex) => {
+                    const row = tbody.insertRow();
+                    const isDestructive = test.destructive;
+                    const samplesForThisTest = isDestructive ? branch.samples : branch.samples;
+                    
+                    let explanation = '';
+                    if (testIndex === 0) {
+                        explanation = '分支起始测试，使用分支样件数';
+                    } else if (isDestructive) {
+                        explanation = '破坏性测试，需要额外样件';
+                        cumulativeSamples += branch.samples;
+                    } else {
+                        explanation = '串行测试，样件可复用';
+                    }
+
+                    row.innerHTML = `
+                        <td><span class="phase-badge phase-${branchIndex + 1}">分支${branchIndex + 1}</span></td>
+                        <td>${test.code} - ${test.name}</td>
+                        <td>${isDestructive ? '<span style="color: red;">是</span>' : '否'}</td>
+                        <td>${samplesForThisTest}</td>
+                        <td><strong>${cumulativeSamples}</strong></td>
+                        <td><small>${explanation}</small></td>
+                    `;
+                });
+            });
+        }
+
+        function generateCostDetailTable() {
+            const tbody = document.getElementById('cost-detail-body');
+            tbody.innerHTML = '';
+
+            let totalCost = 0;
+            const costMap = {};
+
+            currentSequence.forEach(item => {
+                if (!costMap[item.code]) {
+                    costMap[item.code] = {
+                        name: item.name,
+                        unitCost: item.cost / item.samplesUsed,
+                        count: item.samplesUsed,
+                        total: item.cost
+                    };
+                }
+                totalCost += item.cost;
+            });
+
+            Object.values(costMap).forEach(cost => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${cost.name}</td>
+                    <td>${cost.unitCost.toLocaleString()}元</td>
+                    <td>${cost.count}</td>
+                    <td><strong>${cost.total.toLocaleString()}元</strong></td>
+                `;
+            });
+
+            // 总计行
+            const totalRow = tbody.insertRow();
+            totalRow.style.background = '#e8f5e9';
+            totalRow.style.fontWeight = 'bold';
+            totalRow.innerHTML = `
+                <td colspan="3" style="text-align: right;">总计:</td>
+                <td>${totalCost.toLocaleString()}元</td>
+            `;
+        }
+
+        // ==================== 其他功能 ====================
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            if (tabName === 'tests') {
+                loadTestLibrary();
+            } else if (tabName === 'sequence') {
+                updateSelectedTestsList();
+            }
+        }
+
+        function loadHistory() {
+            // 历史记录功能简化
+        }
+
+        function exportPDF() {
+            alert('PDF 导出功能将生成完整测试报告');
+        }
+
+        function exportExcel() {
+            const data = currentSequence.map(item => ({
+                '分支': item.branch,
+                '序号': item.sequence,
+                '测试项目': item.name,
+                '测试代码': item.code,
+                '时长 (h)': item.duration,
+                '费用 (元)': item.cost,
+                '样件数': item.samplesUsed,
+                '破坏性': item.isDestructive ? '是' : '否'
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '测试序列');
+            XLSX.writeFile(wb, '测试序列计划.xlsx');
+        }
+
+        function exportJSON() {
+            const data = {
+                productType: document.querySelector('input[name="productType"]:checked')?.value,
+                installLocation: document.querySelector('input[name="installLocation"]:checked')?.value,
+                generatedTime: new Date().toISOString(),
+                branches: configData.sequenceBranches,
+                sequence: currentSequence
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '测试序列计划.json';
+            a.click();
+        }
+
+        // ==================== 变更评估相关代码 ====================
+        const database = {
+            pcb: [
+                {
+                    name: "PCB Layout 变更 (走线/层叠/过孔位置)",
+                    tests: [
+                        { cat: "环境/老化", item: "K-01 高低温存储", level: "mandatory", samples: 6, funcLevel: "A", reason: "新走线可能导致局部热点，验证焊点热疲劳及板材分层风险。", duration: "48h", branch: "environment" },
+                        { cat: "环境/老化", item: "K-05 温度冲击 (整机)", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证不同材料 CTE 匹配性，100 次循环。", duration: "约 2 周", branch: "environment" },
+                        { cat: "环境/老化", item: "K-16 温度冲击 (PCBA)", level: "mandatory", samples: 8, funcLevel: "A", reason: "验证焊接工艺可靠性，600-1000 次循环，需切片分析。", duration: "约 3 周", branch: "environment" },
+                        { cat: "机械", item: "M-04 振动试验", level: "mandatory", samples: 6, funcLevel: "A", reason: "Layout 改变影响板级刚度及大元件应力分布，需持续监控。", duration: "8h/轴", branch: "environment" },
+                        { cat: "机械", item: "M-05 机械冲击", level: "mandatory", samples: 6, funcLevel: "A", reason: "500m/s², 6ms, 60 次冲击，验证结构完整性。", duration: "1 天", branch: "environment" },
+                        { cat: "电性能", item: "E-01~E-21 全项电性能", level: "mandatory", samples: 6, funcLevel: "A", reason: "寄生参数 (L/C/R) 变化影响电源完整性 (PI) 及短路保护响应。", duration: "3-5 天", branch: "electrical" },
+                        { cat: "EMC", item: "RE/CE/RI/CI/BCI 全项", level: "mandatory", samples: 3, funcLevel: "A", reason: "走线路径是 EMI 发射和抗扰度的最关键因素。", duration: "5-7 天", branch: "emc" },
+                        { cat: "物理分析", item: "X-Ray + 切片分析", level: "mandatory", samples: 2, funcLevel: "-", reason: "K-16 测试中途进行，检查焊点裂纹。", duration: "1 天", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "走线长度/宽度/参考平面变化直接影响阻抗控制和串扰。需重新仿真 SI/PI，重点关注高速信号眼图及电源平面阻抗。",
+                        aging: "新的铜箔走向可能导致电流密度不均，加速电迁移或局部过热。重点关注高温老化后的参数漂移，建议进行 HALT 测试。",
+                        profit: "若仅为微调且仿真余量充足 (>20%)，可尝试缩减样本量至 3pcs，但 EMC 测试不可豁免。EMC 整改成本是测试成本的 10-50 倍。",
+                        quality: "高风险变更。建议在 DV 阶段完成全项验证，PV 阶段可酌情减免。必须监控振动过程中的瞬间断路 (intermittent open)。"
+                    },
+                    costTips: [
+                        "若仿真验证充分，K-05 循环次数可从 100 减至 50 次",
+                        "EMC 测试可先做预兼容测试，失败再整改",
+                        "PCBA 级别测试 (K-16) 可替代部分整机测试"
+                    ]
+                },
+                {
+                    name: "PCB 板材/供应商变更 (Supply Change)",
+                    tests: [
+                        { cat: "环境", item: "K-05 温度冲击", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证不同 Tg 点/CTE 板材的抗分层能力。", duration: "约 2 周", branch: "environment" },
+                        { cat: "环境", item: "K-09 湿热循环 (含霜冻)", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证新材料吸湿率对绝缘电阻 (CAF) 的影响。", duration: "240h", branch: "environment" },
+                        { cat: "环境", item: "K-14 稳态湿热 (等级 2)", level: "mandatory", samples: 6, funcLevel: "A", reason: "加速寿命测试，基于哈尔伯格 - 佩克模型计算时长。", duration: "依模型计算", branch: "environment" },
+                        { cat: "电性能", item: "HV Isolation 绝缘耐压", level: "optional", samples: 3, funcLevel: "A", reason: "若涉及高压或特殊化学环境，需验证耐化学性和绝缘性。", duration: "1 天", branch: "electrical" },
+                        { cat: "物理分析", item: "切片分析 (CAF 检查)", level: "mandatory", samples: 2, funcLevel: "-", reason: "检查导电阳极丝生长情况。", duration: "1 天", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "不同板材介电常数 (Dk/Df) 差异会影响高频信号传输；吸湿率差异影响高压绝缘。需确认 Dk 值变化<5%。",
+                        aging: "关注 Tg 点差异，低 Tg 板材在高温下易发生 Z 轴膨胀导致通孔断裂。建议 Tg≥170℃用于汽车电子。",
+                        profit: "通常只需做材料级认证 + 板级短周期验证，无需全系统长周期测试。若有 UL 黄卡认证可节省 30% 测试时间。",
+                        quality: "要求供应商提供完整的材料认证报告 (UL、RoHS、REACH)。建议保留原供应商板材作为对比样。"
+                    },
+                    costTips: [
+                        "材料级认证可由供应商提供，减少重复测试",
+                        "若有同类项目数据，K-14 测试时长可参考历史数据",
+                        "切片分析可与 K-16 测试合并进行"
+                    ]
+                },
+                {
+                    name: "PCB 铜厚/阻抗线宽变更",
+                    tests: [
+                        { cat: "电性能", item: "E-21 过流测试", level: "mandatory", samples: 6, funcLevel: "A", reason: "载流能力直接相关，验证大电流下的温升。", duration: "2 天", branch: "electrical" },
+                        { cat: "电性能", item: "E-17 短路测试", level: "mandatory", samples: 6, funcLevel: "B", reason: "验证保护电路响应及 PCB 耐受能力。", duration: "1 天", branch: "electrical" },
+                        { cat: "环境", item: "K-03 高低温运行", level: "mandatory", samples: 6, funcLevel: "A", reason: "铜厚变化影响热膨胀匹配，验证热疲劳。", duration: "144h", branch: "environment" },
+                        { cat: "EMC", item: "RE/CE 辐射/传导发射", level: "tbd", samples: 3, funcLevel: "A", reason: "阻抗线宽改变可能影响特性阻抗，进而影响 EMI 频谱。", duration: "3 天", branch: "emc" }
+                    ],
+                    advice: {
+                        principle: "线宽/铜厚直接决定直流电阻和载流能力。阻抗线宽变化会导致反射系数改变，需重新计算阻抗。",
+                        aging: "大电流路径若铜厚不足，长期运行会导致温升过高 (>10℃)，加速周围元器件老化。建议温升<5℃。",
+                        profit: "此项变更成本低但风险高（起火风险）。必须做极限电流测试 (150% 额定电流)，避免售后召回。",
+                        quality: "建议进行红外热成像测试，识别热点。铜厚变更需 IPC-6012 Class 3 认证。"
+                    },
+                    costTips: [
+                        "可先做热仿真，确认无热点后再进行物理测试",
+                        "极限电流测试可用工程样品，减少正式样品消耗",
+                        "EMC 测试若仿真通过可减免"
+                    ]
+                },
+                {
+                    name: "阻焊/丝印颜色或材质变更",
+                    tests: [
+                        { cat: "环境", item: "K-09 湿热循环", level: "optional", samples: 3, funcLevel: "A", reason: "验证新阻焊漆的吸湿性和绝缘性。", duration: "144h", branch: "environment" },
+                        { cat: "化学", item: "C-01 耐化学试剂", level: "optional", samples: 3, funcLevel: "A", reason: "验证耐清洗剂、助焊剂等化学品能力。", duration: "2 天", branch: "environment" },
+                        { cat: "工艺", item: "可焊性测试", level: "mandatory", samples: 3, funcLevel: "-", reason: "不同材质可能影响后续维修或二次回流焊的可焊性。", duration: "1 天", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "主要影响外观和绝缘，对电路原理影响小，但需注意离子迁移风险。确认阻焊油墨符合 IPC-SM-840 Class T。",
+                        aging: "劣质阻焊漆在湿热环境下易开裂或脱落，导致短路。建议进行 1000h 湿热老化验证。",
+                        profit: "测试成本低，建议快速通过。需确保供应商提供 UL 黄卡认证 (文件号 Exxxxx)。",
+                        quality: "外观件需客户签样确认颜色差异 (ΔE<1.5)。建议保留标准色板。"
+                    },
+                    costTips: [
+                        "若仅颜色变更且同供应商，可仅做可焊性测试",
+                        "C-01 测试可选择代表性试剂，无需全项",
+                        "可与 PCB 供应变更测试合并进行"
+                    ]
+                }
+            ],
+            component: [
+                {
+                    name: "Pin2Pin - 无源件 (R/C/L) 品牌/系列变更",
+                    tests: [
+                        { cat: "电性能", item: "E-01/E-02 过压/瞬态", level: "optional", samples: 3, funcLevel: "A", reason: "若额定电压/功率余量>20%，可豁免；否则必做。", duration: "1 天", branch: "electrical" },
+                        { cat: "环境", item: "K-01 高低温存储", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证温漂特性 (TCC) 是否满足系统精度。", duration: "48h", branch: "environment" },
+                        { cat: "环境", item: "K-03 高低温运行", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证工作温度范围内功能稳定性。", duration: "144h", branch: "environment" },
+                        { cat: "功能", item: "Functional Check 功能检查", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证容值/感值偏差对环路稳定性的影响。", duration: "1 天", branch: "electrical" }
+                    ],
+                    advice: {
+                        principle: "电容 ESR/ESL 变化影响电源纹波；电感饱和电流 (Isat) 差异可能导致大电流失效。确认 TCC 曲线匹配。",
+                        aging: "关注 X7R/X5R 电容的直流偏压效应和老化率 (X7R: -2.5%/decade)；电阻的长期稳定性 (±1% 精度)。",
+                        profit: "若有完整 AEC-Q200 报告且参数更优，可仅做系统级验证，大幅降低成本。可节省 60-70% 测试费用。",
+                        quality: "要求供应商提供 AEC-Q200 认证报告、PPAP 文件。建议进行 3 批次来料验证。"
+                    },
+                    costTips: [
+                        "若有 AEC-Q200 报告，E-01/02 可豁免",
+                        "系统级验证可替代部分器件级测试",
+                        "可与同类变更合并测试，共享样品"
+                    ]
+                },
+                {
+                    name: "Pin2Pin - 电源芯片 (LDO/PMIC/MOSFET)",
+                    tests: [
+                        { cat: "电性能", item: "E-01/E-02/E-04/E-05", level: "mandatory", samples: 6, funcLevel: "A", reason: "Load Dump/Jump Start，内部保护阈值可能不同。", duration: "3 天", branch: "electrical" },
+                        { cat: "环境", item: "K-01/K-03 高低温", level: "mandatory", samples: 6, funcLevel: "A", reason: "新器件热阻 (RθJA) 可能不同，需验证结温。", duration: "192h", branch: "environment" },
+                        { cat: "寿命", item: "L-02 高温耐久", level: "mandatory", samples: 6, funcLevel: "A", reason: "基于阿伦尼乌斯模型计算时长，验证热老化。", duration: "依模型计算", branch: "environment" },
+                        { cat: "EMC", item: "CI/BCI/RE", level: "mandatory", samples: 3, funcLevel: "A", reason: "开关频率/slew rate 变化会改变噪声频谱。", duration: "5 天", branch: "emc" }
+                    ],
+                    advice: {
+                        principle: "即使 Pin2Pin，内部架构 (如 NMOS vs PMOS) 不同会导致效率、噪声和启动特性差异。需重新评估环路稳定性。",
+                        aging: "必须重新计算最热工况下的结温 (Tj)，Tj<150℃ (Grade 1)。建议进行双 85 测试 (85℃/85%RH, 1000h)。",
+                        profit: "电源是心脏，切勿在此处省钱。一旦失效会导致整车抛锚，索赔成本可达测试成本的 100-1000 倍。",
+                        quality: "要求供应商提供 AEC-Q100 认证、FMEA 报告。建议进行破坏性物理分析 (DPA)。"
+                    },
+                    costTips: [
+                        "L-02 测试时长可基于历史数据优化",
+                        "若同系列升级，部分电性能测试可减免",
+                        "EMC 预测试可在工程阶段完成"
+                    ]
+                },
+                {
+                    name: "Pin2Pin - 处理器/存储 (MCU/SOC/Flash/DRAM)",
+                    tests: [
+                        { cat: "电性能", item: "E-09/E-10/E-11", level: "mandatory", samples: 6, funcLevel: "A", reason: "复位/掉电/电压跌落，启动时序可能不同。", duration: "2 天", branch: "electrical" },
+                        { cat: "环境", item: "K-01/K-02/K-03", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证极端温度下的时钟稳定性和存储器数据保持力。", duration: "240h", branch: "environment" },
+                        { cat: "EMC", item: "RE/RI/ESD", level: "mandatory", samples: 3, funcLevel: "A", reason: "核心芯片对静电和辐射干扰极度敏感。", duration: "7 天", branch: "emc" },
+                        { cat: "寿命", item: "L-01 上下电耐久", level: "mandatory", samples: 6, funcLevel: "A", reason: "36000 次循环，验证存储器寿命。", duration: "约 2 周", branch: "electrical" },
+                        { cat: "功能", item: "Full Functional + Boot Time", level: "mandatory", samples: 6, funcLevel: "A", reason: "全功能回归及启动时间验证。", duration: "3 天", branch: "electrical" }
+                    ],
+                    advice: {
+                        principle: "时钟抖动 (Jitter)、启动时间、IO 电平阈值的微小差异都可能导致通信失败或逻辑错误。需验证所有通信接口。",
+                        aging: "Flash 磨损均衡算法需重新验证；高温下数据保持力 (Data Retention) 是关键，建议 125℃下>10 年。",
+                        profit: "软件适配成本可能高于硬件测试。建议早期介入，避免后期软件大规模返工 (可节省 50-100 人天)。",
+                        quality: "要求供应商提供 AEC-Q100 Grade 1/2 认证、安全手册 (Safety Manual)。建议进行功能安全 (ISO 26262) 评估。"
+                    },
+                    costTips: [
+                        "L-01 测试可与老化测试并行进行",
+                        "功能测试可自动化，减少人力成本",
+                        "若同厂商同系列，部分测试可参考历史数据"
+                    ]
+                },
+                {
+                    name: "Pin2Pin - 晶振/时钟器件变更",
+                    tests: [
+                        { cat: "环境", item: "K-01/K-02 温度循环/阶梯", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证频偏 (Ppm) 在全温范围内是否超标。", duration: "约 1 周", branch: "environment" },
+                        { cat: "电性能", item: "E-10/E-11 电压跌落/中断", level: "tbd", samples: 3, funcLevel: "B", reason: "验证电源波动下的起振稳定性。", duration: "1 天", branch: "electrical" },
+                        { cat: "功能", item: "Communication Error Rate", level: "mandatory", samples: 6, funcLevel: "A", reason: "重点测试 CAN/Ethernet 误码率。", duration: "2 天", branch: "electrical" },
+                        { cat: "机械", item: "M-04 振动", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证振动下的频率稳定性。", duration: "8h/轴", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "负载电容 (Cload) 和等效串联电阻 (ESR) 的匹配至关重要，不匹配会导致停振或频率偏差。需重新匹配外围电路。",
+                        aging: "晶振随时间老化频率会漂移 (典型<5ppm/年)，需验证生命周期末端的频率是否仍在通信容限内 (CAN: ±0.5%)。",
+                        profit: "小器件大风险。建议直接进行整车级通信测试，避免实验室环境与实车差异导致的漏测。",
+                        quality: "要求供应商提供 AEC-Q200 认证、频率稳定性报告。建议进行振动 + 温度综合测试。"
+                    },
+                    costTips: [
+                        "误码率测试可自动化，24 小时无人值守",
+                        "若同规格同厂商，K 测试可缩减 50%",
+                        "可与通信芯片变更测试合并"
+                    ]
+                },
+                {
+                    name: "保护器件变更 (TVS/保险丝/压敏电阻)",
+                    tests: [
+                        { cat: "电性能", item: "E-01/E-02/E-05", level: "mandatory", samples: 6, funcLevel: "A", reason: "Surge/Load Dump，钳位电压和通流能力必须验证。", duration: "3 天", branch: "electrical" },
+                        { cat: "EMC", item: "BCI/ESD", level: "mandatory", samples: 3, funcLevel: "A", reason: "保护响应速度直接影响 ESD 和浪涌测试结果。", duration: "3 天", branch: "emc" },
+                        { cat: "环境", item: "K-05 温度冲击", level: "optional", samples: 3, funcLevel: "A", reason: "验证温度循环下的保护特性稳定性。", duration: "约 2 周", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "结电容变化会影响信号完整性 (高速线<1pF)；钳位电压过高可能无法保护后级 IC。需验证 Vc-Vbr 比值。",
+                        aging: "TVS 在多次浪涌后性能会退化，需验证余量 (>20%)。建议进行 10 次 Load Dump 后复测。",
+                        profit: "安规和 EMC 的关键。必须做极限测试，确保保护有效。失效可能导致批量召回，风险极高。",
+                        quality: "要求供应商提供 AEC-Q101 认证、IV 曲线报告。建议进行破坏性测试验证失效模式。"
+                    },
+                    costTips: [
+                        "ESD 测试可先做人机接口，再做电源接口",
+                        "若同系列升级，K-05 可豁免",
+                        "可与系统级 EMC 测试合并进行"
+                    ]
+                },
+                {
+                    name: "连接器变更 (型号/供应商，含引脚定义/间距改变)",
+                    tests: [
+                        { cat: "机械", item: "M-04 振动 (监测微断)", level: "mandatory", samples: 6, funcLevel: "A", reason: "接触正压力变化，验证振动下的接触稳定性。", duration: "8h/轴", branch: "environment" },
+                        { cat: "环境", item: "K-09/K-10 湿热/防水", level: "mandatory", samples: 6, funcLevel: "A", reason: "密封结构和材质变化影响防水防潮。", duration: "约 2 周", branch: "environment" },
+                        { cat: "电性能", item: "E-13/E-14 连接器中断", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证接触电阻和瞬间断路 (<1μs)。", duration: "2 天", branch: "electrical" },
+                        { cat: "EMC", item: "Shielding Effectiveness", level: "tbd", samples: 3, funcLevel: "A", reason: "若屏蔽连接器，验证屏蔽效能 (>40dB)。", duration: "2 天", branch: "emc" },
+                        { cat: "机械", item: "插拔耐久测试", level: "mandatory", samples: 3, funcLevel: "A", reason: "验证插拔力变化及接触可靠性。", duration: "3 天", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "引脚间距改变意味着 PCB 封装变更，需检查爬电距离/电气间隙是否符合安规 (>2.5mm for 250V)。",
+                        aging: "镀层磨损或应力松弛会导致接触电阻增大 (>10mΩ)，引发过热或信号间歇性中断。建议监控接触电阻变化。",
+                        profit: "涉及线束配合，需联合线束厂共同验证。避免单方面测试遗漏系统匹配问题，可减少 30% 售后问题。",
+                        quality: "要求供应商提供 USCAR-2/21 认证、CPK 报告。建议进行混合气体腐蚀测试 (K-18)。"
+                    },
+                    costTips: [
+                        "插拔测试可自动化，减少人力",
+                        "若同系列同供应商，部分测试可减免",
+                        "可与线束变更测试合并进行"
+                    ]
+                },
+                {
+                    name: "Pin2Pin - 射频芯片 (WIFI/BT/4G/5G/GNSS)",
+                    tests: [
+                        { cat: "射频", item: "RF Performance (TRP/TIS)", level: "mandatory", samples: 6, funcLevel: "A", reason: "天线匹配对芯片参数极度敏感。", duration: "5 天", branch: "emc" },
+                        { cat: "EMC", item: "RE/RS 辐射发射/抗扰", level: "mandatory", samples: 3, funcLevel: "A", reason: "验证辐射特性。", duration: "5 天", branch: "emc" },
+                        { cat: "环境", item: "K-01/K-02/K-03", level: "mandatory", samples: 6, funcLevel: "A", reason: "温循对频偏和相位噪声的影响。", duration: "240h", branch: "environment" },
+                        { cat: "功能", item: "通信协议一致性", level: "mandatory", samples: 3, funcLevel: "A", reason: "验证协议栈兼容性。", duration: "3 天", branch: "electrical" }
+                    ],
+                    advice: {
+                        principle: "天线匹配电路需重新调试，确认 VSWR<2:1。验证接收灵敏度、发射功率、EVM 等关键指标。",
+                        aging: "射频器件参数随温度和时间漂移较大，需验证全温范围内的通信稳定性。建议进行高低温下的 OTA 测试。",
+                        profit: "射频测试设备昂贵，建议外包给专业实验室，但需严格审核其测试用例覆盖度。可节省设备投资 100 万+。",
+                        quality: "要求供应商提供 GCF/PTCRB 认证 (蜂窝)、WiFi 联盟认证。建议进行实车路测验证。"
+                    },
+                    costTips: [
+                        "RF 测试可外包，但需驻场监督",
+                        "协议一致性可使用自动化测试工具",
+                        "可与整机 RF 测试合并进行"
+                    ]
+                },
+                {
+                    name: "No Pin2Pin - 所有器件 (封装/功能改变)",
+                    tests: [
+                        { cat: "全部", item: "所有 K/E/M/EMC/L 系列", level: "mandatory", samples: 15, funcLevel: "A", reason: "视为新设计，风险最高，需全项验证。", duration: "8-12 周", branch: "all" },
+                        { cat: "寿命", item: "L-01/L-02/L-03", level: "mandatory", samples: 6, funcLevel: "A", reason: "完整寿命验证。", duration: "依模型计算", branch: "environment" },
+                        { cat: "物理分析", item: "DPA 破坏性物理分析", level: "mandatory", samples: 3, funcLevel: "-", reason: "验证内部结构和工艺。", duration: "3 天", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "布局重排、焊接应力重构、散热路径完全改变。等同于 Early Production Change，需重新进行完整的设计验证。",
+                        aging: "必须执行完整的 AEC-Q100/Q200 验证流程，不可有任何豁免。建议进行 HALT/HASS 测试识别薄弱环节。",
+                        profit: "最高风险变更。建议作为新项目立项，测试成本虽高 (50-100 万)，但能避免批量召回 (可能 1000 万+)。",
+                        quality: "要求完整的 PPAP 文件包、AEC-Q 认证、8D 报告。建议进行小批量试产验证 (30-50pcs)。"
+                    },
+                    costTips: [
+                        "可分阶段测试，先做关键项再做全项",
+                        "寿命测试可基于加速模型优化时长",
+                        "可与新客户项目测试资源共享"
+                    ]
+                }
+            ],
+            structure: [
+                {
+                    name: "安装位置/支架/外壳变更",
+                    tests: [
+                        { cat: "环境", item: "K-01/K-03 高低温", level: "tbd", samples: 6, funcLevel: "A", reason: "若温度等级变更则必做，取决于新位置的环境温度剖面。", duration: "192h", branch: "environment" },
+                        { cat: "机械", item: "M-04 随机振动/正弦扫频", level: "mandatory", samples: 6, funcLevel: "A", reason: "共振点偏移，需重新验证疲劳寿命。", duration: "24h/轴", branch: "environment" },
+                        { cat: "环境", item: "K-10 防水 (IPX0-IPX8)", level: "mandatory", samples: 6, funcLevel: "A", reason: "若密封面、排水孔或安装朝向改变，必须重测。", duration: "2 天", branch: "environment" },
+                        { cat: "环境", item: "K-17 阳光辐射", level: "tbd", samples: 3, funcLevel: "A", reason: "若外壳颜色/材质变更或暴露在阳光下。", duration: "25 天", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "安装位置改变直接决定环境温度 (Tamb) 和流体流向，需重新计算降额和散热仿真。确认新位置的温度等级。",
+                        aging: "新的共振频率可能与发动机/路面激励重合，导致结构件或焊点在短期内疲劳断裂。建议进行模态分析。",
+                        profit: "利用 CAE 仿真预先分析模态和热场，可减少物理测试的迭代次数，节省 30-50% 测试成本。",
+                        quality: "要求提供安装位置的温度分布数据、振动谱数据。建议进行实车温度场测量验证。"
+                    },
+                    costTips: [
+                        "CAE 仿真可替代部分物理测试",
+                        "若温度等级不变，K 测试可减免",
+                        "防水测试可与密封件变更测试合并"
+                    ]
+                },
+                {
+                    name: "散热界面材料变更 (TIM: 硅脂/垫片/胶)",
+                    tests: [
+                        { cat: "环境", item: "K-01/K-03/K-05 温度相关", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证材料泵出 (Pump-out) 效应和干裂情况。", duration: "约 3 周", branch: "environment" },
+                        { cat: "电性能", item: "Functional (Thermal Throttling)", level: "mandatory", samples: 6, funcLevel: "A", reason: "监控高温下是否触发降频或保护。", duration: "2 天", branch: "electrical" },
+                        { cat: "寿命", item: "L-02 高温耐久", level: "mandatory", samples: 6, funcLevel: "A", reason: "1000h+ 高温老化，验证 TIM 寿命。", duration: "依模型计算", branch: "environment" },
+                        { cat: "物理分析", item: "TIM 厚度/空洞率检查", level: "mandatory", samples: 3, funcLevel: "-", reason: "验证涂覆质量和老化后变化。", duration: "1 天", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "导热系数和热阻直接决定结温。材料硬度影响接触压力。确认导热系数变化<10%。",
+                        aging: "长期高温下 TIM 易硬化、开裂或流失，导致热阻急剧上升 (>50%)，是电子失效的主因之一。建议监控热阻变化。",
+                        profit: "务必进行长周期高温老化测试 (1000h+)，模拟全生命周期，避免售后过热故障。TIM 失效导致的召回成本极高。",
+                        quality: "要求供应商提供材料认证、导热系数报告、老化测试数据。建议进行切片分析验证界面结合。"
+                    },
+                    costTips: [
+                        "L-02 测试可与其他高温测试并行",
+                        "热阻测试可自动化监控",
+                        "可与热设计变更测试合并进行"
+                    ]
+                },
+                {
+                    name: "密封圈/导电泡棉/弹片变更",
+                    tests: [
+                        { cat: "环境", item: "K-10 防水", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证密封性能。", duration: "2 天", branch: "environment" },
+                        { cat: "环境", item: "K-09 湿热循环", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证材料老化后的密封性能。", duration: "240h", branch: "environment" },
+                        { cat: "机械", item: "M-04 振动", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证振动下的密封保持能力。", duration: "8h/轴", branch: "environment" },
+                        { cat: "化学", item: "C-01 耐化学试剂", level: "optional", samples: 3, funcLevel: "A", reason: "验证耐油、耐清洗剂能力。", duration: "2 天", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "密封材料压缩永久变形率需<20%。导电泡棉需验证屏蔽效能 (>40dB) 和接触电阻 (<50mΩ)。",
+                        aging: "橡胶材料在高温高湿下易老化硬化，导致密封失效。建议进行 1000h 双 85 测试。",
+                        profit: "密封件成本低但失效后果严重 (进水导致短路)。建议进行加速老化测试，避免售后索赔。",
+                        quality: "要求供应商提供材料认证 (UL、RoHS)、压缩永久变形报告。建议进行老化后拆解检查。"
+                    },
+                    costTips: [
+                        "防水测试可与外壳变更测试合并",
+                        "若同材料同供应商，C-01 可豁免",
+                        "振动测试可与整机振动测试共享样品"
+                    ]
+                }
+            ],
+            process: [
+                {
+                    name: "SMT 工艺/焊膏/回流焊曲线变更",
+                    tests: [
+                        { cat: "环境", item: "K-16 温度冲击 (PCBA)", level: "mandatory", samples: 8, funcLevel: "A", reason: "验证焊点抗热疲劳能力，600-1000 次循环。", duration: "约 3 周", branch: "environment" },
+                        { cat: "机械", item: "M-04 振动", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证机械强度。", duration: "8h/轴", branch: "environment" },
+                        { cat: "物理分析", item: "X-Ray + 切片分析", level: "mandatory", samples: 4, funcLevel: "-", reason: "检查空洞率 (<25%)、IMC 层厚度 (1-5μm)、润湿角。", duration: "2 天", branch: "environment" },
+                        { cat: "电性能", item: "ICT/功能测试", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证焊接质量对功能的影响。", duration: "1 天", branch: "electrical" }
+                    ],
+                    advice: {
+                        principle: "焊膏合金成分 (SAC305 vs SAC405) 和回流曲线影响金属间化合物 (IMC) 的生长。确认回流曲线符合焊膏规格。",
+                        aging: "IMC 过厚 (>5μm) 会导致脆性断裂；空洞率过高 (>25%) 会降低散热和机械强度。建议监控 IMC 生长速率。",
+                        profit: "工艺变更测试周期短，成本低。建议增加切片分析样本量 (4pcs 以上)，以防批量隐患。可避免批量返工。",
+                        quality: "要求提供钢网设计报告、回流曲线报告、SPI/AOI 数据。建议进行首件确认和过程能力 (CPK) 分析。"
+                    },
+                    costTips: [
+                        "切片分析可与 K-16 测试合并",
+                        "X-Ray 可全检，切片抽样",
+                        "可与新工艺导入验证测试共享数据"
+                    ]
+                },
+                {
+                    name: "三防漆/涂覆材料/工艺变更",
+                    tests: [
+                        { cat: "环境", item: "K-09 湿热循环", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证绝缘性和防霉能力。", duration: "240h", branch: "environment" },
+                        { cat: "环境", item: "K-14 稳态湿热 (等级 2)", level: "mandatory", samples: 6, funcLevel: "A", reason: "加速寿命测试。", duration: "依模型计算", branch: "environment" },
+                        { cat: "环境", item: "K-15 凝露", level: "mandatory", samples: 6, funcLevel: "A", reason: "凝露测试，验证防护效果。", duration: "约 1 周", branch: "environment" },
+                        { cat: "电性能", item: "HV Isolation 高压绝缘", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证绝缘性能。", duration: "1 天", branch: "electrical" },
+                        { cat: "化学", item: "K-18 耐混合气体腐蚀", level: "tbd", samples: 3, funcLevel: "A", reason: "若用于高腐蚀环境。", duration: "14-21 天", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "涂层 CTE 若与元件不匹配，温循下会拉裂元件或焊点。确认涂层厚度 (25-75μm) 和固化条件。",
+                        aging: "长期高温下涂层是否发黄、开裂或释放腐蚀性气体，直接影响内部电路寿命。建议进行 1000h 老化后检查。",
+                        profit: "三防漆失效往往导致现场返修困难。务必进行长周期湿热老化，避免售后高额索赔。涂层成本<10 元/件，召回成本>1000 元/件。",
+                        quality: "要求供应商提供 UL 认证、固化报告、厚度测量报告。建议进行老化后拆解检查，确认无腐蚀。"
+                    },
+                    costTips: [
+                        "K-14 测试时长可基于加速模型优化",
+                        "绝缘测试可自动化",
+                        "可与 PCBA 防护测试合并进行"
+                    ]
+                },
+                {
+                    name: "固件/软件版本变更 (伴随硬件小改)",
+                    tests: [
+                        { cat: "功能", item: "Full Functional + Regression", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证新功能及旧功能回归。", duration: "3-5 天", branch: "electrical" },
+                        { cat: "电性能", item: "E-09/E-10 复位/掉电", level: "tbd", samples: 3, funcLevel: "A", reason: "验证异常断电下的数据保护和启动逻辑。", duration: "1 天", branch: "electrical" },
+                        { cat: "寿命", item: "L-01 上下电耐久", level: "tbd", samples: 3, funcLevel: "A", reason: "若涉及启动逻辑变更。", duration: "约 2 周", branch: "electrical" }
+                    ],
+                    advice: {
+                        principle: "软硬件耦合紧密，硬件小改可能需要软件补偿 (如校准参数)。需验证所有配置参数的正确加载。",
+                        aging: "关注 Flash 写入次数和 RAM 长期运行的内存泄漏问题。建议进行 7x24 小时稳定性测试。",
+                        profit: "软件测试成本相对较低，但需自动化测试覆盖，确保无回归缺陷。自动化测试可节省 70% 人力成本。",
+                        quality: "要求提供软件版本说明、测试报告、已知问题列表。建议进行代码审查和静态分析。"
+                    },
+                    costTips: [
+                        "功能测试可自动化，CI/CD 集成",
+                        "回归测试可使用自动化测试框架",
+                        "可与软件发布测试合并进行"
+                    ]
+                }
+            ],
+            production: [
+                {
+                    name: "组装线变更",
+                    tests: [
+                        { cat: "工艺", item: "首件确认 + CPK 分析", level: "mandatory", samples: 30, funcLevel: "-", reason: "验证新产线的过程能力。", duration: "1 周", branch: "environment" },
+                        { cat: "功能", item: "EOL 测试验证", level: "mandatory", samples: 50, funcLevel: "A", reason: "验证下线测试覆盖率。", duration: "2 天", branch: "electrical" },
+                        { cat: "环境", item: "K-01 高低温存储", level: "optional", samples: 6, funcLevel: "A", reason: "若组装工艺有重大变更。", duration: "48h", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "组装线变更可能影响装配精度、扭矩控制、静电防护。需确认关键工艺参数 (CTQ) 受控。",
+                        aging: "新产线初期可能存在工艺不稳定，建议进行小批量试产 (300-500pcs) 验证。",
+                        profit: "产线变更测试成本较低，但需确保 PPAP 文件完整。可避免批量质量事故。",
+                        quality: "要求提供控制计划、作业指导书、MSA 报告。建议进行过程审核 (VDA 6.3)。"
+                    },
+                    costTips: [
+                        "首件确认可与量产首件合并",
+                        "EOL 测试可使用生产样品",
+                        "可与新工艺验证共享测试资源"
+                    ]
+                },
+                {
+                    name: "SMT 线变更",
+                    tests: [
+                        { cat: "工艺", item: "SPI/AOI 能力验证", level: "mandatory", samples: 50, funcLevel: "-", reason: "验证锡膏检测和光学检测能力。", duration: "2 天", branch: "environment" },
+                        { cat: "物理分析", item: "X-Ray + 切片", level: "mandatory", samples: 5, funcLevel: "-", reason: "验证焊接质量。", duration: "2 天", branch: "environment" },
+                        { cat: "环境", item: "K-05 温度冲击 (整机)", level: "mandatory", samples: 8, funcLevel: "A", reason: "验证焊点可靠性。", duration: "约 2 周", branch: "environment" },
+                        { cat: "机械", item: "M-04 振动", level: "mandatory", samples: 6, funcLevel: "A", reason: "验证机械强度。", duration: "8h/轴", branch: "environment" }
+                    ],
+                    advice: {
+                        principle: "SMT 线变更需确认设备精度、炉温曲线、锡膏印刷参数一致。建议进行炉温曲线对比测试。",
+                        aging: "不同 SMT 线的工艺窗口可能不同，需验证焊点长期可靠性。建议进行对比测试 (原线 vs 新线)。",
+                        profit: "SMT 线变更风险较高，建议进行充分验证。可避免批量焊接不良导致的返工成本。",
+                        quality: "要求提供设备校准报告、炉温曲线报告、CPK 数据。建议进行首件确认和小批量试产。"
+                    },
+                    costTips: [
+                        "SPI/AOI 验证可使用生产样品",
+                        "切片分析可与 K-05 测试合并",
+                        "可与新产线导入验证共享测试"
+                    ]
+                }
+            ]
+        };
+
+        // 安装位置信息
+        const locationInfo = {
+            1: { temp: "-40~70℃", storage: "-40~75℃", ip: "IP67/69K", desc: "车身底部（无热辐射区）" },
+            2: { temp: "-40~85℃", storage: "-40~90℃", ip: "IP55", desc: "车门内部区域" },
+            3: { temp: "-40~85℃", storage: "-40~90℃", ip: "IP53", desc: "乘客仓内非阳光直射区域" },
+            4: { temp: "-40~85℃", storage: "-40~90℃", ip: "IP67", desc: "车身外部安装" },
+            5: { temp: "-40~105℃", storage: "-40~110℃", ip: "/", desc: "车轮内" },
+            6: { temp: "-40~85℃", storage: "-40~90℃", ip: "IP67", desc: "热辐射区域（前舱）" },
+            7: { temp: "-40~120℃", storage: "-40~125℃", ip: "IP67/69K", desc: "电机/发动机附近 300mm" }
+        };
+
+        function updateSubCategories() {
+            const category = document.getElementById('categorySelect').value;
+            const subSelect = document.getElementById('subCategorySelect');
+            const resultArea = document.getElementById('result-area');
+            
+            subSelect.innerHTML = '<option value="">-- 请选择具体变更 --</option>';
+            resultArea.style.display = 'none';
+            
+            if (!category) {
+                subSelect.disabled = true;
+                return;
+            }
+
+            subSelect.disabled = false;
+            const items = database[category];
+            
+            if (!items) return;
+
+            items.forEach((item, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.text = item.name;
+                subSelect.appendChild(option);
+            });
+        }
+
+        function updateTestLevel() {
+            const location = document.getElementById('locationSelect').value;
+            const info = locationInfo[location];
+            const locationInfoDiv = document.getElementById('locationInfo');
+            
+            locationInfoDiv.innerHTML = `
+                <div class="location-badge">${info.desc}</div>
+                <div style="margin-top: 10px; font-size: 13px; color: #666;">
+                    <strong>工作温度：</strong>${info.temp} | 
+                    <strong>存储温度：</strong>${info.storage} | 
+                    <strong>防护等级：</strong>${info.ip}
+                </div>
+            `;
+        }
+
+        function parseDuration(days) {
+            if (!days) return 0;
+            if (days.includes('周')) {
+                return parseInt(days) * 7;
+            } else if (days.includes('天')) {
+                return parseInt(days);
+            } else if (days.includes('h')) {
+                return Math.ceil(parseInt(days) / 24);
+            } else if (days.includes('依模型')) {
+                return 30; // 默认寿命测试 30 天
+            }
+            return 0;
+        }
+
+        function showResults() {
+            const category = document.getElementById('categorySelect').value;
+            const subIndex = document.getElementById('subCategorySelect').value;
+            const resultArea = document.getElementById('result-area');
+            const location = document.getElementById('locationSelect').value;
+            
+            if (!category || subIndex === "") {
+                resultArea.style.display = 'none';
+                return;
+            }
+
+            const data = database[category][subIndex];
+            const tbody = document.getElementById('testTableBody');
+            const info = locationInfo[location];
+            
+            tbody.innerHTML = '';
+
+            // 计算统计数据
+            let totalTests = 0;
+            let mandatoryCount = 0;
+            let totalSamples = 0;
+            
+            // 并行周期计算
+            let electricalDuration = 0;
+            let emcDuration = 0;
+            let environmentDuration = 0;
+
+            data.tests.forEach(test => {
+                totalTests++;
+                if (test.level === 'mandatory') mandatoryCount++;
+                totalSamples += test.samples;
+                
+                const days = parseDuration(test.duration);
+                if (test.branch === 'electrical') {
+                    electricalDuration = Math.max(electricalDuration, days);
+                } else if (test.branch === 'emc') {
+                    emcDuration = Math.max(emcDuration, days);
+                } else if (test.branch === 'environment') {
+                    environmentDuration = Math.max(environmentDuration, days);
+                } else if (test.branch === 'all') {
+                    // 全项测试取最大值
+                    electricalDuration = Math.max(electricalDuration, days);
+                    emcDuration = Math.max(emcDuration, days);
+                    environmentDuration = Math.max(environmentDuration, days);
+                }
+            });
+
+            const parallelDuration = Math.max(electricalDuration, emcDuration, environmentDuration);
+
+            // 更新指标
+            document.getElementById('totalTests').innerText = totalTests;
+            document.getElementById('mandatoryTests').innerText = mandatoryCount;
+            document.getElementById('totalSamples').innerText = totalSamples;
+            document.getElementById('estDuration').innerText = Math.ceil(parallelDuration / 7) + '周';
+            document.getElementById('parallelDuration').innerText = Math.ceil(parallelDuration / 7) + ' 周';
+
+            // 填充表格
+            data.tests.forEach(test => {
+                const row = document.createElement('tr');
+                
+                let badgeClass = '';
+                let badgeText = '';
+                
+                if (test.level === 'mandatory') {
+                    badgeClass = 'badge-mandatory';
+                    badgeText = '● 必做';
+                } else if (test.level === 'optional') {
+                    badgeClass = 'badge-optional';
+                    badgeText = '○ 可选';
+                } else {
+                    badgeClass = 'badge-tbd';
+                    badgeText = '△ 待议';
+                }
+
+                let funcLevelClass = '';
+                if (test.funcLevel === 'A') funcLevelClass = 'level-a';
+                else if (test.funcLevel === 'B') funcLevelClass = 'level-b';
+                else if (test.funcLevel === 'C') funcLevelClass = 'level-c';
+                else if (test.funcLevel === 'D') funcLevelClass = 'level-d';
+                else if (test.funcLevel === 'E') funcLevelClass = 'level-e';
+
+                row.innerHTML = `
+                    <td>${test.cat}</td>
+                    <td><strong>${test.item}</strong></td>
+                    <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                    <td><span class="sample-badge">${test.samples}pcs</span></td>
+                    <td><span class="${funcLevelClass}">${test.funcLevel === '-' ? '-' : test.funcLevel + '级'}</span></td>
+                    <td>${test.reason}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // 填充并行测试序列
+            const electricalSteps = document.getElementById('electricalSteps');
+            const emcSteps = document.getElementById('emcSteps');
+            const environmentSteps = document.getElementById('environmentSteps');
+            
+            electricalSteps.innerHTML = '';
+            emcSteps.innerHTML = '';
+            environmentSteps.innerHTML = '';
+
+            data.tests.forEach(test => {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = 'sequence-step';
+                stepDiv.innerHTML = `
+                    <span>${test.item}</span>
+                    <span class="step-duration">${test.duration}</span>
+                `;
+                
+                if (test.branch === 'electrical') {
+                    electricalSteps.appendChild(stepDiv);
+                } else if (test.branch === 'emc') {
+                    emcSteps.appendChild(stepDiv);
+                } else if (test.branch === 'environment') {
+                    environmentSteps.appendChild(stepDiv);
+                } else if (test.branch === 'all') {
+                    // 全项测试在所有分支都显示
+                    electricalSteps.appendChild(stepDiv.cloneNode(true));
+                    emcSteps.appendChild(stepDiv.cloneNode(true));
+                    environmentSteps.appendChild(stepDiv.cloneNode(true));
+                }
+            });
+
+            // 填充建议
+            document.getElementById('advice-principle').innerText = data.advice.principle;
+            document.getElementById('advice-aging').innerText = data.advice.aging;
+            document.getElementById('advice-profit').innerText = data.advice.profit;
+            document.getElementById('advice-quality').innerText = data.advice.quality;
+
+            // 填充成本优化建议
+            const costList = document.getElementById('costOptList');
+            costList.innerHTML = '';
+            data.costTips.forEach(tip => {
+                const li = document.createElement('li');
+                li.innerText = tip;
+                costList.appendChild(li);
+            });
+
+            // 更新位置信息
+            updateTestLevel();
+
+            resultArea.style.display = 'block';
+            resultArea.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ==================== 寿命计算器相关代码 ====================
+        let currentModel = 'hp';
+        let currentArrSubModel = 'arr1';
+
+        function selectModel(model) {
+            currentModel = model;
+            document.querySelectorAll('.model-form').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`model-${model}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.model-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function selectArrSubModel(subModel) {
+            currentArrSubModel = subModel;
+            document.getElementById('arr-model1').classList.toggle('hidden', subModel !== 'arr1');
+            document.getElementById('arr-model2').classList.toggle('hidden', subModel !== 'arr2');
+            
+            const buttons = document.querySelectorAll('#model-arr .model-btn');
+            buttons[0].classList.toggle('active', subModel === 'arr1');
+            buttons[1].classList.toggle('active', subModel === 'arr2');
+        }
+
+        function calculate() {
+            let resultAF = '-';
+            let resultTimeEquiv = '-';
+            let resultTestTime = '-';
+            let details = '';
+
+            const k = 0.00008617; // Boltzmann constant
+
+            if (currentModel === 'hp') {
+                // Hallberg-Peck Model - CORRECTED with your formula
+                const EA = parseFloat(document.getElementById('hp-EA').value);
+                const Ttest_C = parseFloat(document.getElementById('hp-Ttest').value);
+                const TParkingField_C = parseFloat(document.getElementById('hp-TParkingField').value);
+                const RHTest = parseFloat(document.getElementById('hp-RHTest').value);
+                const RHParkingField = parseFloat(document.getElementById('hp-RHParkingField').value);
+                const tParkingField = parseFloat(document.getElementById('hp-tParkingField').value);
+
+                const Ttest_K = Ttest_C + 273.15;
+                const TParkingField_K = TParkingField_C + 273.15;
+
+                // Corrected formula: AF = (RH_test/RH_parking_field)^3 * exp(EA/k * (1/TParkingField_K - 1/Ttest_K))
+                const af_humidity = Math.pow(RHTest / RHParkingField, 3);
+                const af_temp = Math.exp((EA / k) * (1 / TParkingField_K - 1 / Ttest_K));
+                const AF = af_humidity * af_temp;
+
+                resultAF = AF.toFixed(4);
+                resultTimeEquiv = (AF * tParkingField).toFixed(2);
+                resultTestTime = (tParkingField / AF).toFixed(2); // Corrected: tTest = tParking, Field / AF
+
+                details = `AF_humidity = (RH_test/RH_parking_field)^3 = (${RHTest}/${RHParkingField})^3 = ${af_humidity.toFixed(6)}
+AF_temp = exp(EA/k * (1/TParkingField_K - 1/Ttest_K)) = ${af_temp.toFixed(6)}
+AF_total = AF_humidity * AF_temp = ${AF.toFixed(4)}
+t_Test = t_Parking,Field / AF = ${tParkingField} / ${AF.toFixed(4)} = ${resultTestTime} h`;
+            }
+            else if (currentModel === 'arr') {
+                // Arrhenius Model
+                let EA, Ttest_C, TField_K, toper, p_values, TF_values;
+                let isSubModel2 = currentArrSubModel === 'arr2';
+
+                if (isSubModel2) {
+                    EA = parseFloat(document.getElementById('arr2-EA').value);
+                    Ttest_C = parseFloat(document.getElementById('arr2-Ttest').value);
+                    toper = parseFloat(document.getElementById('arr2-toper').value);
+                    p_values = [
+                        parseFloat(document.getElementById('arr2-p1').value),
+                        parseFloat(document.getElementById('arr2-p2').value),
+                        parseFloat(document.getElementById('arr2-p3').value),
+                        parseFloat(document.getElementById('arr2-p4').value),
+                        parseFloat(document.getElementById('arr2-p5').value),
+                        parseFloat(document.getElementById('arr2-p6').value),
+                        parseFloat(document.getElementById('arr2-p7').value)
+                    ];
+                    TF_values = [
+                        parseFloat(document.getElementById('arr2-TF1').value),
+                        parseFloat(document.getElementById('arr2-TF2').value),
+                        parseFloat(document.getElementById('arr2-TF3').value),
+                        parseFloat(document.getElementById('arr2-TF4').value),
+                        parseFloat(document.getElementById('arr2-TF5').value),
+                        parseFloat(document.getElementById('arr2-TF6').value),
+                        parseFloat(document.getElementById('arr2-TF7').value)
+                    ];
+                } else {
+                    EA = parseFloat(document.getElementById('arr-EA').value);
+                    Ttest_C = parseFloat(document.getElementById('arr-Ttest').value);
+                    toper = parseFloat(document.getElementById('arr-toper').value);
+                    p_values = [
+                        parseFloat(document.getElementById('arr-p1').value),
+                        parseFloat(document.getElementById('arr-p2').value),
+                        parseFloat(document.getElementById('arr-p3').value),
+                        parseFloat(document.getElementById('arr-p4').value),
+                        parseFloat(document.getElementById('arr-p5').value),
+                        parseFloat(document.getElementById('arr-p6').value),
+                        parseFloat(document.getElementById('arr-p7').value)
+                    ];
+                    TF_values = [
+                        parseFloat(document.getElementById('arr-TF1').value),
+                        parseFloat(document.getElementById('arr-TF2').value),
+                        parseFloat(document.getElementById('arr-TF3').value),
+                        parseFloat(document.getElementById('arr-TF4').value),
+                        parseFloat(document.getElementById('arr-TF5').value),
+                        parseFloat(document.getElementById('arr-TF6').value),
+                        parseFloat(document.getElementById('arr-TF7').value)
+                    ];
+                }
+
+                const Ttest_K = Ttest_C + 273.15;
+                let sum_p_over_af = 0;
+
+                details += `Arrhenius AF_i = exp(EA/k * (1/TF_i - 1/Ttest))\n`;
+                for (let i = 0; i < 7; i++) {
+                    const TF_K = TF_values[i] + 273.15;
+                    const af_i = Math.exp((EA / k) * (1 / TF_K - 1 / Ttest_K));
+                    sum_p_over_af += p_values[i] / af_i;
+                    details += `  AF_${i+1}(at ${TF_values[i]}°C) = ${af_i.toFixed(6)}, p_${i+1} = ${p_values[i]}, p_${i+1}/AF_${i+1} = ${(p_values[i] / af_i).toFixed(8)}\n`;
+                }
+                
+                const effective_AF = 1 / sum_p_over_af;
+                resultAF = effective_AF.toFixed(4);
+                resultTimeEquiv = (effective_AF * toper).toFixed(2);
+                resultTestTime = (toper / effective_AF).toFixed(2);
+
+                details += `\nEffective AF = 1 / Σ(p_i / AF_i) = ${effective_AF.toFixed(6)}\n`;
+                details += `Test_Time = Oper_Time / Effective_AF = ${resultTestTime} h`;
+                
+                if(isSubModel2) {
+                    // For sub-model 2, also calculate time for TopMax
+                    const TopMax_C = parseFloat(document.getElementById('arr2-TopMax').value);
+                    const TopMax_K = TopMax_C + 273.15;
+                    let sum_p_over_af_topmax = 0;
+                    details += `\n--- Calculating for TopMax (${TopMax_C}°C) ---\n`;
+                    for (let i = 0; i < 7; i++) {
+                        // Only consider temperatures above TopMax
+                        if(TF_values[i] <= TopMax_C) continue;
+                        const TF_K = TF_values[i] + 273.15;
+                        const af_i = Math.exp((EA / k) * (1 / TF_K - 1 / TopMax_K));
+                        sum_p_over_af_topmax += p_values[i] / af_i;
+                        details += `  AF_${i+1}_topmax(at ${TF_values[i]}°C > ${TopMax_C}°C) = ${af_i.toFixed(6)}, p_${i+1} = ${p_values[i]}, p_${i+1}/AF_${i+1}_topmax = ${(p_values[i] / af_i).toFixed(8)}\n`;
+                    }
+                    if(sum_p_over_af_topmax > 0) {
+                        const effective_AF_topmax = 1 / sum_p_over_af_topmax;
+                        const test_time_topmax = (toper * (1 - p_values.slice(0, p_values.findIndex((p, idx) => TF_values[idx] > TopMax_C)).reduce((a,b) => a+b, 0)) / effective_AF_topmax); // Simplified for demo
+                        details += `\nEffective AF_TopMax = 1 / Σ(p_i>TopMax / AF_i>TopMax) = ${effective_AF_topmax.toFixed(6)}\n`;
+                        details += `Test_Time_TopMax = ... (calculation simplified for demo) ~ ${(test_time_topmax || 0).toFixed(2)} h\n`;
+                        details += `Total Test Time ≈ ${resultTestTime} h (Tmax) + ... (TopMax part)`;
+                    }
+                }
+            }
+            else if (currentModel === 'cm') {
+                // Coffin-Manson Model
+                const deltaTField = parseFloat(document.getElementById('cm-deltaTField').value);
+                const deltaTTest = parseFloat(document.getElementById('cm-deltaTTest').value);
+                const c = parseFloat(document.getElementById('cm-c').value);
+                const nField = parseFloat(document.getElementById('cm-NField').value);
+                const Tgrad = parseFloat(document.getElementById('cm-Tgrad').value);
+                const Tmin = parseFloat(document.getElementById('cm-Tmin').value);
+                const Tmax = parseFloat(document.getElementById('cm-Tmax').value);
+                const TminHold = parseFloat(document.getElementById('cm-TminHold').value);
+                const TmaxHold = parseFloat(document.getElementById('cm-TmaxHold').value);
+
+                // Calculate temperature difference to determine if deltaT matches Tmax-Tmin
+                const calculatedDeltaT = Tmax - Tmin;
+                if (Math.abs(deltaTTest - calculatedDeltaT) > 0.1) {
+                    details += `警告: 输入的ΔT_test (${deltaTTest}) 与 T_max-T_min (${calculatedDeltaT}) 不匹配\n`;
+                }
+
+                const ACM = Math.pow((deltaTTest / deltaTField), c);
+                const nTest = nField / ACM;
+
+                // Calculate single cycle time properly
+                // Time to go from Tmin to Tmax = (Tmax - Tmin) / Tgrad
+                // Time to go from Tmax to Tmin = (Tmax - Tmin) / Tgrad
+                // Total ramp time = 2 * (Tmax - Tmin) / Tgrad
+                // Total hold time = TminHold + TmaxHold
+                // Total cycle time = ramp time + hold time
+                const rampTimeMin = 2 * (Tmax - Tmin) / Tgrad;
+                const holdTimeMin = TminHold + TmaxHold;
+                const cycleTimeMin = rampTimeMin + holdTimeMin;
+                const cycleTimeH = cycleTimeMin / 60;
+                
+                resultAF = ACM.toFixed(4);
+                resultTimeEquiv = nField; // Cycles are equivalent here
+                resultTestTime = (nTest * cycleTimeH).toFixed(2);
+
+                details = `ACM = (ΔT_test / ΔT_field)^c = (${deltaTTest} / ${deltaTField})^${c} = ${ACM.toFixed(4)}
+N_test = N_field / ACM = ${nField} / ${ACM.toFixed(4)} = ${nTest.toFixed(2)} cycles
+Ramp time (from ${Tmin}°C to ${Tmax}°C and back): 2*(${Tmax}-${Tmin})/${Tgrad} = ${rampTimeMin.toFixed(2)} min
+Hold time (at ${Tmin}°C and ${Tmax}°C): ${TminHold} + ${TmaxHold} = ${holdTimeMin.toFixed(2)} min
+Single cycle time = Ramp time + Hold time = ${cycleTimeMin.toFixed(2)} min = ${cycleTimeH.toFixed(2)} h
+Total Test Time = N_test * Cycle_Time = ${nTest.toFixed(2)} * ${cycleTimeH.toFixed(2)} = ${resultTestTime} h`;
+            }
+
+            document.getElementById('result-AF').textContent = resultAF;
+            document.getElementById('result-time-equiv').textContent = resultTimeEquiv;
+            document.getElementById('result-test-time').textContent = resultTestTime;
+            document.getElementById('result-details').textContent = details;
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfigFile();
+            loadTestLibrary();
+            renderCustomTestList();
+            loadProductConfig();
+            loadHistory();
+            setupFileDrop();
+            updateTestLevel();
+        });
+    </script>
+</body>
+</html>
